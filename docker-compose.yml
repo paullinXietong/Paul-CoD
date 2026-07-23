@@ -1,0 +1,36 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NUXT_PUBLIC_BASE_URL: /api
+        NUXT_PUBLIC_ORDER_URL: /admin/order
+        NUXT_PUBLIC_LOGIN_URL: /admin/login
+        NUXT_PUBLIC_WSS_URL: wss://chat.co-logistics.cn/wss
+        NUXT_PUBLIC_MALL_BASE_URL: /mall-api
+        NUXT_PUBLIC_NEW_USER_SHIPPING_COUPON_ENABLED: "false"
+    image: coddrop-sourcing-ui:latest
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - web
+    ports:
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
+

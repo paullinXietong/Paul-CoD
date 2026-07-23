@@ -1,0 +1,795 @@
+<template>
+  <div class="bg-white">
+    <div v-if="dataLoading" class="co-loading animate-spin">
+      <svg viewBox="0 0 1024 1024" class="w-[90px] h-[90px]" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0 512h93.09A418.91 418.91 0 1 0 512 93.09V0c282.764 0 512 229.236 512 512s-229.236 512-512 512S0 794.764 0 512z" fill="#8a8a8a" />
+      </svg>
+    </div>
+    <Teleport to="body">
+      <div v-if="showRelated" class="co-mask">
+        <div class="relatedModal">
+          <div class="flex justify-between items-center pb-3">
+            <div class="font-semibold">Related Products</div>
+            <svg @click="showRelated = false" class="icon cursor-pointer" viewBox="0 0 1024 1024" width="22" height="22">
+              <path d="M631 485.84l309.77-309.78a65.63 65.63 0 0 0 0-92.83 65.63 65.63 0 0 0-92.83 0L538.16 393a37 37 0 0 1-52.32 0L176.06 83.23a65.63 65.63 0 0 0-92.83 0 65.63 65.63 0 0 0 0 92.83L393 485.84a37 37 0 0 1 0 52.32L83.23 847.94a65.63 65.63 0 0 0 0 92.83 65.63 65.63 0 0 0 92.83 0L485.84 631a37 37 0 0 1 52.32 0l309.78 309.77a65.63 65.63 0 0 0 92.83 0 65.63 65.63 0 0 0 0-92.83L631 538.16a37 37 0 0 1 0-52.32z" />
+            </svg>
+          </div>
+          <div class="flex flex-wrap gap-y-5 gap-x-4">
+            <div v-for="item in relatedList" :key="`${item.offerId}-${item.source}`" class="productItem shadow rounded-md">
+              <NuxtLink 
+                :to="{ 
+                  path: '/productDetail', 
+                  query: { 
+                    id: item.product_id, 
+                    source: item.source, 
+                    code: item.country_code,
+                  } 
+                }" 
+                class="relative block"
+                target="_blank">
+                <img class="max-h-64 h-48 w-full object-cover object-left cursor-pointer rounded" :src="item.main_image" :alt="item.title" loading="lazy">
+                <!-- <button class="action-badge add-product" @click.prevent.stop="addProduct(item)">
+                  <span class="desc">Add To My Products</span>
+                  <i class="icon-product"></i>
+                </button>
+                <button class="action-badge add-list" @click.prevent.stop="addList(item)">
+                  <span class="desc">List</span>
+                  <i
+                  class="icon-list"></i>
+                </button> -->
+                <!-- <div class="-mt-5 flex justify-center absolute">
+                  <div class="absolute -top-2 -left-1 p-0.5 rounded-full" style="background: #FDA05E;">
+                    <svg t="1767581511789" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8954" width="32" height="32"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFFFFF" p-id="8955"></path><path d="M512 0c282.773333 0 512 229.226667 512 512S794.773333 1024 512 1024 0 794.773333 0 512 229.226667 0 512 0z m0 32C246.912 32 32 246.912 32 512S246.912 992 512 992 992 777.088 992 512 777.088 32 512 32z" fill="#EEEEEE" p-id="8956"></path><path d="M512 512m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#965E28" p-id="8957"></path><path d="M512 597.333333a85.333333 85.333333 0 0 0 85.333333-85.333333h32a117.333333 117.333333 0 0 1-234.666666 0H426.666667a85.333333 85.333333 0 0 0 85.333333 85.333333z" fill="#9BA160" p-id="8958"></path><path d="M341.333333 29.12v965.76C142.506667 924.586667 0 734.933333 0 512 0 289.066667 142.485333 99.413333 341.333333 29.12z" fill="#006A44" p-id="8959"></path><path d="M682.666667 29.141333C881.557333 99.413333 1024 289.066667 1024 512c0 222.933333-142.464 412.586667-341.333333 482.858667z" fill="#E40017" p-id="8960"></path></svg>
+                  </div>
+                  <div class="text-white pl-8 pr-2 rounded-full text-sm text-center" style="background: #FDA05E;">MX Stock</div>
+                </div> -->
+              </NuxtLink>
+              <div class="p-3">
+                <NuxtLink 
+                  :to="{ 
+                    path: '/productDetail', 
+                    query: { 
+                      id: item.product_id, 
+                      source: item.source, 
+                      code: item.country_code
+                    } 
+                  }"
+                  target="_blank">
+                  <div class="productTitle" :title="item.title">{{ item.title }}</div>
+                </NuxtLink>
+                <p class="pt-2 font-semibold text-lg text-red-500">{{ item.priceRange }}</p>
+                <svg v-show="item.source == 5" t="1753172696272" class="icon" viewBox="0 0 3072 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11241" width="100" height="30"><path d="M2931.00339757 557.83384772c0 19.94712867-5.24663961 32.66775352-15.73991755 41.77512756-8.81039455 5.44462519-17.52179507 12.67112902-31.47983523 14.50250228h-15.73991754c-12.27515544 0-21.03605304-1.83137444-29.79695063-7.27599962-7.02851708-3.61325189-10.49327804-10.88925154-10.49327798-19.99662448 0-12.67112902 7.02851708-21.77850198 20.98655604-25.39175383 5.29613542-1.83137444 14.00753709-5.49412216 29.74745471-7.32549664h52.56538515v3.71224473z m85.77760201 87.16350589V507.00084418c0-29.10399854-10.49327804-50.83300469-31.43033939-67.26587426-19.3036725-14.50250227-52.46639235-21.77850198-96.32037582-21.77850309h-8.76089755c-40.29022972 0-68.30530277 3.66274774-91.07373732 18.16525117-20.98655718 12.72062486-33.16271988 32.66775352-36.7264737 56.32712687h87.60897532c1.68288467-12.72062486 13.95804012-27.27262405 40.24073275-27.27262527h8.7114005c14.05703293 0 24.50081513 3.66274774 31.52933217 10.88925156 7.02851708 3.61325189 10.49327804 12.67112902 10.493278 29.05450156v5.44462637h-50.78350772c-33.26171265 0-54.29776565 1.83137444-68.30530273 3.61325073-17.52179507 1.88087021-31.52933217 5.49412216-40.2902297 12.72062606a95.87490646 95.87490646 0 0 0-26.23319565 27.27262406c-5.29613542 10.88925154-7.07801291 23.60987643-7.07801286 39.94375318 0 23.60987643 7.02851708 39.94375315 21.03605295 50.83300474 20.2936041 13.31458403 44.05197023 20.2936041 68.3053028 20.04612142 19.3036725 0 36.7759706-1.88087021 52.51588825-7.32549662 19.3036725-5.44462519 45.53686814-19.99662447 52.51588939-34.49912798v5.44462639c0 16.33387675 1.73238043 27.27262405 7.02851585 29.10399852H3020.29525752c-1.73238043-1.83137444-3.46476213-7.27599962-3.46476212-12.72062593zM2262.15589377 557.83384772c0.3464766 15.09646147-4.60318345 29.89594446-14.00753716 41.77512756-12.22565965 5.44462519-19.25417558 12.67112902-33.26171267 14.50250228h-17.47229801c-12.22565965 0-22.76843465-1.83137444-28.0645701-7.27599962-6.92952309-5.44462519-10.39428521-10.88925154-10.39428521-19.99662448 0-12.67112902 6.97902006-21.77850198 20.93706028-25.39175383 10.19629844-3.66274774 20.78857047-6.13757835 31.52933093-7.32549664h50.73401194v3.71224473z m85.82709785 87.16350589V507.00084418c0-29.10399854-10.49327804-50.83300469-33.26171265-67.26587426-17.52179507-14.50250227-49.00163026-21.77850198-94.53849954-21.77850309h-8.7608976c-40.29022972 0-70.03768325 5.44462519-91.07373618 18.16525117-20.98655718 12.72062486-33.16271988 30.88587602-38.45885525 56.32712687h87.50998134a44.84391616 44.84391616 0 0 1 42.07210714-27.27262527h8.76089755c15.69042058 0 22.76843465 3.66274774 31.47983516 10.88925156 7.02851708 5.44462519 10.44378219 14.50250227 10.44378218 29.05450156v5.44462637h-50.73401194c-33.26171265 0-56.0301473 1.83137444-68.30530268 3.61325073-17.47229806 1.88087021-29.79695053 5.49412216-38.50835115 12.72062606-12.27515544 9.1073741-22.76843465 18.16525117-28.06457004 27.27262406-5.24663961 14.50250227-8.76089756 27.27262405-8.76089753 39.94375318 0 21.77850198 8.76089756 38.16187565 24.55031096 50.83300474 15.73991758 12.77012182 38.60734505 20.04612147 66.52342532 20.04612142 19.3036725 0 36.82546761-1.88087021 52.56538512-7.27599969 19.3036725-5.49412216 43.75499064-19.99662447 52.46639241-34.54862491v5.44462639c0 16.38337374 1.78187745 25.49074662 5.29613544 29.10399852h82.26334288c-1.73238043-1.83137444-3.46476213-7.27599962-3.46476094-12.72062593z m252.08616408-54.49575241c-8.71140057 10.88925154-24.50081513 16.33387675-45.43787536 16.33387674-21.03605304 0-36.82546761-5.44462519-47.36824255-16.33387674-10.39428521-10.83975451-15.73991758-27.22312829-15.7399176-50.83300353 0-25.39175386 5.29613542-45.38837831 15.7399176-58.10900433 12.27515544-12.67112902 28.06457005-18.16525117 47.36824255-18.16525116 19.2046797 0 34.99409312 5.49412216 45.43787536 18.16525116 10.49327804 12.72062486 15.8389104 30.88587602 15.83891039 54.49575243s-5.34563241 41.72563065-15.7894134 54.44625548z m75.33381981-139.8278839c-22.76843465-23.60987643-49.00163026-34.49912795-80.53096243-34.49912796a253.91753856 253.91753856 0 0 0-40.24073274 3.61325196 162.49732578 162.49732578 0 0 0-61.32628263 38.11237863V321.68558794h-87.50998253v308.75976639c0 7.32549659 0 18.16525117-1.78187742 27.27262526h87.50998243c0-5.44462519 1.78187745-9.1073741 1.78187752-16.33387673V615.94285204c12.22565965 14.50250227 24.50081513 27.27262405 47.26924977 39.94375312 14.05703293 7.22650269 36.72647483 9.1073741 49.05112605 9.10737412 36.7759706 0 66.52342531-10.88925154 85.77760198-34.54862495 19.3036725-21.77850198 29.79695053-52.61488217 29.79695053-90.77675666 0-39.94375315-10.54277503-68.9982547-29.79695053-88.99488037zM1931.2711477 590.5016012c-8.81039455 10.88925154-24.55031211 16.33387675-45.53686807 16.33387674-19.25417558 0-35.04359007-5.44462519-45.53686932-16.33387674-12.27515544-12.67112902-17.57129199-29.05450161-17.5712909-50.83300353 0-23.60987643 5.34563241-43.60650083 17.5712909-58.10900433 12.22565965-12.67112902 26.28269257-18.16525117 45.53686932-18.16525122 19.3036725 0 34.99409312 5.49412216 45.53686807 18.16525122 12.22565965 12.72062486 17.47229806 30.88587602 17.47229812 54.4957524s-5.24663961 41.72563065-17.47229812 54.44625551z m76.96720751-139.82788397c-22.76843465-23.60987643-49.00163026-34.49912795-82.26334287-34.49912789-14.00753709 0-28.01507308 1.78187745-40.24073271 3.61325194-21.03605304 7.27599962-45.53686814 23.60987643-61.27678691 38.11237862V321.68558794h-87.60897538v308.75976639c0 7.32549659 0 18.16525117-1.73238036 27.27262526h87.50998243c0-5.44462519 1.83137444-9.1073741 1.83137331-16.33387673V615.94285204c12.22565965 14.50250227 24.50081513 27.27262405 47.26924976 39.94375312 14.00753709 7.22650269 40.24073274 9.1073741 49.05112725 9.10737412 36.72647483 0 64.74154782-10.88925154 87.50998129-34.54862495 19.3036725-23.60987643 28.06457005-52.61488217 28.06457003-90.77675666 0-39.94375315-8.81039455-68.9982547-28.06457003-88.99488037zM1152.14522677 525.11659839l61.27678577-130.72051098 56.03014723 130.77000682h-117.306933v-0.04949584z m120.77169513-203.4310105H1162.68800178l-168.09044074 336.0323917h98.05275743l29.7969506-67.21637839h178.58371864l28.01507431 67.21637839h105.08127334l-161.11142056-336.03239165z m175.11895659 335.98289477h85.82709792V321.68558794h-85.82709792v335.98289472zM1589.84362662 387.12008775V321.73508378h91.07373747v65.38500396H1589.84362662z m1.7818775 270.59789184h87.60897531v-236.09876388h-87.60897531v236.0987639zM685.04584876 347.37432138a40.19123573 40.19123573 0 0 1 4.15771401 19.30367254 47.21975278 47.21975278 0 0 0-4.15771401-19.3036725z m-85.38162847 306.48292378c-37.36992974 2.62331923-33.756679-17.52179507-11.53270772-46.77428345 50.58552093-67.95882621 144.3815715-160.36897172 148.5887826-227.83283274C742.51139688 291.6411537 655.00141444 264.51701933 564.91760974 264.51701933 502.10642917 266.10091002 437.21639151 283.62270509 393.01593032 299.51111247 240.66540719 353.66038834 145.28546703 438.64604444 84.70163335 534.22397127c-62.71218779 94.53849833-43.21052853 185.36475319 92.21215868 187.98807247 102.30946438-4.25670687 171.3077191-32.86574028 240.89993301-68.99825473 0.49496637 0-193.48219462 55.7826635-265.20276254 14.8984758-7.91945578-4.25670687-15.73991758-10.14680261-17.81877458-26.53017631 0-33.4596994 54.79273198-68.45379257 86.96552032-79.64002256V504.62500751a219.02243821 219.02243821 0 0 0 206.64828868-32.37077387c2.12835404 5.84059873 4.25670687 13.21559116 3.76174179 21.23403977h10.9882443c2.67281618-22.91692441-12.62163206-45.14089573-37.91439296-46.77428345 7.32549659 5.89009457 12.67112902 10.59227194 15.2449512 14.89847471l-0.98993155 0.98993267-0.49496635 0.49496521c-84.34219997 59.54440525-166.11057646 31.87580757-173.98053532 30.29191687l46.9227732-46.22982009-13.16609418-33.50919641c93.35058007-32.91523608 170.31778757-56.87158906 298.31598535-79.64002249l-28.60903343-23.26340102 14.74998607-9.00838012c75.87828198 21.23403971 127.00826627 37.12244718 124.38494594 77.51166969-0.9899315 6.88002728-3.71224473 14.84897887-7.91945463 23.36239383-22.57044785 45.14089573-89.04437623 117.90089219-115.92102904 149.23223751-17.42280222 20.73907343-34.7961075 39.89425619-46.92277323 58.99994193-13.71055752 19.6006521-20.59058367 37.71640628-21.1350458 54.14927705 2.67281618 133.34383019 393.25045729-62.61319379 470.26716051-114.28764145-112.2582802 48.3581741-234.06940386 94.63749235-366.37380552 103.10141027v0.04949701z" fill="#FF6003" p-id="11242"></path></svg>
+                <div v-if="item.source == 4" class="flex items-center mt-1.5">
+                  <img :src="westmonthImage" class="w-6 h-6 inline-block mr-2" alt="WestMonth" loading="lazy">
+                  <div>WestMonth</div>
+                </div>
+                <div class="mt-2 flex justify-between items-center">
+                  <div class="chatbtn" @click="chatNows(item)">Chat Now</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <div class="notice-bar hidden" id="noticeBar">
+      <div class="notice-track" aria-live="polite">
+        <div class="notice-marquee flex items-center">
+          <img src="@/assets/images/icon/notice.png" class="noticeIcon" alt="notice"> <span>Directly shipping from our USA local warehouse, fast delivery in 2-4 days</span>
+        </div>
+        <div class="notice-marquee flex items-center">
+          <img src="@/assets/images/icon/notice.png" class="noticeIcon" alt="notice"> <span>Directly shipping from our USA local warehouse, fast delivery in 2-4 days</span>
+        </div>
+        <div class="notice-marquee flex items-center">
+          <img src="@/assets/images/icon/notice.png" class="noticeIcon" alt="notice"><span>Directly shipping from our USA local warehouse, fast delivery in 2-4 days</span>
+        </div>
+        <div class="notice-marquee flex items-center">
+          <img src="@/assets/images/icon/notice.png" class="noticeIcon" alt="notice"><span>Directly shipping from our USA local warehouse, fast delivery in 2-4 days</span>
+        </div>
+        <div class="notice-marquee flex items-center">
+          <img src="@/assets/images/icon/notice.png" class="noticeIcon" alt="notice"><span>Directly shipping from our USA local warehouse, fast delivery in 2-4 days</span>
+        </div>
+        <div class="notice-marquee flex items-center">
+          <img src="@/assets/images/icon/notice.png" class="noticeIcon" alt="notice"><span>Directly shipping from our USA local warehouse, fast delivery in 2-4 days</span>
+        </div>
+      </div>
+      <!-- <button class="absolute right-0 top-0 closeBtn" type="button" aria-label="关闭" @click="closeBar">✕</button> -->
+    </div>
+    <div class="mx-auto max-w-[1300px] px-4">
+      <div class="mt-6 flex">
+        <div class="flex-1">
+          <div class="mt-3 flex relative">
+            <div class="flex-shrink-0 text-sm rounded" style="width:270px;background-color:#F8F8F8;overflow-x:auto;max-height:400px;"
+              @mouseenter="showCatePanels = true" @mouseleave="showCatePanels = false">
+              <div ref="catePanels" v-show="showCatePanels"
+                style="top: 0px;left: 270px;height: 400px;width: 1030px;z-index: 40;background: #F8F8F8;"
+                class="absolute border-r rounded shadow border-l overflow-y-scroll">
+                <div class="p-4 grid grid-cols-6" style="gap: 16px;">
+                  <div class="cateImg col-span-1 flex flex-col items-center cursor-pointer"
+                    v-for="(i,n) in catetree" @click="toSearch(i.category_id,i.name)">
+                    <div class="shadow-sm overflow-hidden" style="width: 80px;height: 80px;border-radius: 100%;">
+                      <img :src="i.image_url" style="width: 80px;height: 80px;" :alt="i.name" loading="lazy">
+                    </div>
+                    <div class="p-2 text-center">{{i.name}}</div>
+                  </div>
+                  <div v-show="iscate" @click="getCateall"
+                    class="cateImg col-span-1 flex flex-col items-center cursor-pointer">
+                    <div class="flex justify-center items-center bg-white rounded-full shadow-sm overflow-hidden"
+                      style="width: 80px;height: 80px;">
+                      <img src="@/assets/images/moreCategory.svg" style="width: 42px;height: 42px;" alt="more category" loading="lazy">
+                    </div>
+                    <div class="p-2 text-center">more</div>
+                  </div>
+                </div>
+              </div>
+              <div v-show="cateName!=''" class="sticky top-0 px-2" style="background: #F8F8F8;">
+                <div @click="resetCate"
+                  class="py-3 flex items-center cursor-pointer border-b">
+                  <svg t="1760950278468" class="icon flex-shrink-0 mr-2" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4796" width="18" height="18"><path d="M700.269 930.666c-14.331 0-27.677-5.512-37.657-15.529l-365.34-365.99c-1.337-1.306-2.38-2.417-3.234-3.607l-2.16-2.723c-10.653-10.703-15.888-23.296-15.888-36.627 0-13.571 5.351-26.26 15.053-35.73l367.853-363.953c9.951-9.813 23.238-15.222 37.401-15.222 13.848 0 26.931 5.25 36.832 14.769 9.841 9.549 15.507 22.867 15.506 36.518 0 13.484-5.365 26.259-15.134 35.969l-331.846 328.283 336.081 336.964c9.607 9.666 14.915 22.296 14.915 35.619 0 13.958-5.673 27.055-15.937 36.876-9.768 9.271-22.734 14.381-36.444 14.381z" fill="#272636" p-id="4797"></path></svg>
+                  <div>{{cateName}}</div>
+                </div>
+              </div>
+              <div v-for="(i,n) in cateList" :key="i.category_id+n" @mouseenter="getCates(i.children, i.category_id)" class="px-2 py-2 flex items-center cursor-pointer select-none">
+                <div class="ml-2">{{i.name}}</div>
+              </div>
+            </div>
+            <div class="swiper" style="width:1000px;margin-left:30px;">
+              <div class="swiper-wrapper">
+                <a :href="'/specialAreas?id=44&keyword=Smart+Bracelets&code=MX'" style="width:100%;">
+                  <img src="@/assets/images/bander/electronics.png" style="width:100%;" alt="Smart Bracelets products">
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-3 gap-4">
+            <div class="p-2 col-span-1 rounded bg-gray-100">
+              <div class="font-semibold">Browsing history</div>
+              <div class="grid grid-cols-2 gap-5 mt-5">
+                <div v-for="(i,n) in historyList" :key="i.product_id+n" class="flex justify-center productItem">
+                  <NuxtLink :to="{ path: '/productDetail', query: { id: i.product_id, source: 5, code: i.country_code } }" class="relative" target="_blank">
+                    <img :src="i.main_image" class="w-30 h-30" alt="Browsing history" loading="lazy"/>
+                    <!-- <button class="action-badge add-product" @click.prevent.stop="addProduct(i)">
+                      <span class="desc">Add To My Products</span>
+                      <i class="icon-product"></i>
+                    </button>
+                    <button class="action-badge add-list" @click.prevent.stop="addList(i)">
+                      <span class="desc">List</span>
+                      <i
+                      class="icon-list"></i>
+                    </button> -->
+                    <div class="-mt-5 flex justify-center absolute">
+                      <div class="absolute -top-2 -left-1 p-0.5 rounded-full" style="background: #FDA05E;">
+                        <svg t="1767581511789" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8954" width="32" height="32"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFFFFF" p-id="8955"></path><path d="M512 0c282.773333 0 512 229.226667 512 512S794.773333 1024 512 1024 0 794.773333 0 512 229.226667 0 512 0z m0 32C246.912 32 32 246.912 32 512S246.912 992 512 992 992 777.088 992 512 777.088 32 512 32z" fill="#EEEEEE" p-id="8956"></path><path d="M512 512m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#965E28" p-id="8957"></path><path d="M512 597.333333a85.333333 85.333333 0 0 0 85.333333-85.333333h32a117.333333 117.333333 0 0 1-234.666666 0H426.666667a85.333333 85.333333 0 0 0 85.333333 85.333333z" fill="#9BA160" p-id="8958"></path><path d="M341.333333 29.12v965.76C142.506667 924.586667 0 734.933333 0 512 0 289.066667 142.485333 99.413333 341.333333 29.12z" fill="#006A44" p-id="8959"></path><path d="M682.666667 29.141333C881.557333 99.413333 1024 289.066667 1024 512c0 222.933333-142.464 412.586667-341.333333 482.858667z" fill="#E40017" p-id="8960"></path></svg>
+                      </div>
+                      <div class="text-white pl-8 pr-2 rounded-full text-sm text-center" style="background: #FDA05E;">MX Stock</div>
+                    </div>
+                  </NuxtLink>
+                </div>
+              </div>
+            </div>
+            <div class="p-2 col-span-1 rounded bg-gray-100">
+              <div class="font-semibold">Keep looking for</div>
+              <div class="grid grid-cols-2 gap-5 mt-5">
+                <div v-for="(i,n) in lookingList" :key="i.product_id+n" class="flex justify-center productItem">
+                  <NuxtLink :to="{ path: '/productDetail', query: { id: i.product_id, source: 5, code: i.country_code } }" class="relative" target="_blank">
+                    <img :src="i.main_image" class="w-30 h-30" alt="Keep looking for" loading="lazy"/>
+                    <!-- <button class="action-badge add-product" @click.prevent.stop="addProduct(i)">
+                      <span class="desc">Add To My Products</span>
+                      <i class="icon-product"></i>
+                    </button>
+                    <button class="action-badge add-list" @click.prevent.stop="addList(i)">
+                      <span class="desc">List</span>
+                      <i
+                      class="icon-list"></i>
+                    </button> -->
+                    <div class="-mt-5 flex justify-center absolute">
+                      <div class="absolute -top-2 -left-1 p-0.5 rounded-full" style="background: #FDA05E;">
+                        <svg t="1767581511789" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8954" width="32" height="32"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFFFFF" p-id="8955"></path><path d="M512 0c282.773333 0 512 229.226667 512 512S794.773333 1024 512 1024 0 794.773333 0 512 229.226667 0 512 0z m0 32C246.912 32 32 246.912 32 512S246.912 992 512 992 992 777.088 992 512 777.088 32 512 32z" fill="#EEEEEE" p-id="8956"></path><path d="M512 512m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#965E28" p-id="8957"></path><path d="M512 597.333333a85.333333 85.333333 0 0 0 85.333333-85.333333h32a117.333333 117.333333 0 0 1-234.666666 0H426.666667a85.333333 85.333333 0 0 0 85.333333 85.333333z" fill="#9BA160" p-id="8958"></path><path d="M341.333333 29.12v965.76C142.506667 924.586667 0 734.933333 0 512 0 289.066667 142.485333 99.413333 341.333333 29.12z" fill="#006A44" p-id="8959"></path><path d="M682.666667 29.141333C881.557333 99.413333 1024 289.066667 1024 512c0 222.933333-142.464 412.586667-341.333333 482.858667z" fill="#E40017" p-id="8960"></path></svg>
+                      </div>
+                      <div class="text-white pl-8 pr-2 rounded-full text-sm text-center" style="background: #FDA05E;">MX Stock</div>
+                    </div>
+                  </NuxtLink>
+                </div>
+              </div>
+            </div>
+            <div class="p-2 col-span-1 rounded bg-gray-100">
+              <div class="font-semibold">Frequently searched</div>
+              <div class="grid grid-cols-2 gap-5 mt-5">
+                <div v-for="(i,n) in searchedList" :key="i.product_id+n" class="flex justify-center productItem">
+                  <NuxtLink :to="{ path: '/productDetail', query: { id: i.product_id, source: 5, code: i.country_code } }" class="relative" target="_blank">
+                    <img :src="i.main_image" class="w-30 h-30" alt="Frequently searched" loading="lazy"/>
+                    <!-- <button class="action-badge add-product" @click.prevent.stop="addProduct(i)">
+                      <span class="desc">Add To My Products</span>
+                      <i class="icon-product"></i>
+                    </button>
+                    <button class="action-badge add-list" @click.prevent.stop="addList(i)">
+                      <span class="desc">List</span>
+                      <i
+                      class="icon-list"></i>
+                    </button> -->
+                    <div class="-mt-5 flex justify-center absolute">
+                      <div class="absolute -top-2 -left-1 p-0.5 rounded-full" style="background: #FDA05E;">
+                        <svg t="1767581511789" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8954" width="32" height="32"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFFFFF" p-id="8955"></path><path d="M512 0c282.773333 0 512 229.226667 512 512S794.773333 1024 512 1024 0 794.773333 0 512 229.226667 0 512 0z m0 32C246.912 32 32 246.912 32 512S246.912 992 512 992 992 777.088 992 512 777.088 32 512 32z" fill="#EEEEEE" p-id="8956"></path><path d="M512 512m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#965E28" p-id="8957"></path><path d="M512 597.333333a85.333333 85.333333 0 0 0 85.333333-85.333333h32a117.333333 117.333333 0 0 1-234.666666 0H426.666667a85.333333 85.333333 0 0 0 85.333333 85.333333z" fill="#9BA160" p-id="8958"></path><path d="M341.333333 29.12v965.76C142.506667 924.586667 0 734.933333 0 512 0 289.066667 142.485333 99.413333 341.333333 29.12z" fill="#006A44" p-id="8959"></path><path d="M682.666667 29.141333C881.557333 99.413333 1024 289.066667 1024 512c0 222.933333-142.464 412.586667-341.333333 482.858667z" fill="#E40017" p-id="8960"></path></svg>
+                      </div>
+                      <div class="text-white pl-8 pr-2 rounded-full text-sm text-center" style="background: #FDA05E;">MX Stock</div>
+                    </div>
+                  </NuxtLink>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <div class="font-semibold text-xl">Top-Viewed products</div>
+            <div class="mt-2 grid grid-cols-4 gap-4">
+              <div class="col-span-1 bg-gray-100 p-3">
+                <div>Shopify</div>
+                <div v-for="(i,n) in zoneShopify" :key="i.product_id+n" class="p-2 flex items-center productItems">
+                  <div class="mr-4">#{{ n+1 }}</div>
+                  <NuxtLink :to="{ path: '/productDetail', query: { id: i.product_id, source: i.source, code: i.country_code } }" class="relative" target="_blank">
+                    <img :src="i.main_image" class="w-30 h-30" :alt="i.title" loading="lazy"/>
+                    <!-- <button class="action-badge add-product" @click.prevent.stop="addProduct(i)">
+                      <span class="desc">Add To My Products</span>
+                      <i class="icon-product"></i>
+                    </button>
+                    <button class="action-badge add-list" @click.prevent.stop="addList(i)">
+                      <span class="desc">List</span>
+                      <i
+                      class="icon-list"></i>
+                    </button> -->
+                    <div class="-mt-5 flex justify-center absolute">
+                      <div class="absolute -top-2 -left-1 p-0.5 rounded-full" style="background: #FDA05E;">
+                        <svg t="1767581511789" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8954" width="32" height="32"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFFFFF" p-id="8955"></path><path d="M512 0c282.773333 0 512 229.226667 512 512S794.773333 1024 512 1024 0 794.773333 0 512 229.226667 0 512 0z m0 32C246.912 32 32 246.912 32 512S246.912 992 512 992 992 777.088 992 512 777.088 32 512 32z" fill="#EEEEEE" p-id="8956"></path><path d="M512 512m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#965E28" p-id="8957"></path><path d="M512 597.333333a85.333333 85.333333 0 0 0 85.333333-85.333333h32a117.333333 117.333333 0 0 1-234.666666 0H426.666667a85.333333 85.333333 0 0 0 85.333333 85.333333z" fill="#9BA160" p-id="8958"></path><path d="M341.333333 29.12v965.76C142.506667 924.586667 0 734.933333 0 512 0 289.066667 142.485333 99.413333 341.333333 29.12z" fill="#006A44" p-id="8959"></path><path d="M682.666667 29.141333C881.557333 99.413333 1024 289.066667 1024 512c0 222.933333-142.464 412.586667-341.333333 482.858667z" fill="#E40017" p-id="8960"></path></svg>
+                      </div>
+                      <div class="text-white pl-8 pr-2 rounded-full text-sm text-center" style="background: #FDA05E;">MX Stock</div>
+                    </div>
+                  </NuxtLink>
+                  <div class="ml-3">US${{ i.usd }}</div>
+                </div>
+              </div>
+              <div class="col-span-1 bg-gray-100 p-3">
+                <div>TikTok</div>
+                <div v-for="(i,n) in zoneTiktok" :key="i.product_id+n" class="p-2 flex items-center productItems">
+                  <div class="mr-4">#{{ n+1 }}</div>
+                  <NuxtLink :to="{ path: '/productDetail', query: { id: i.product_id, source: i.source, code: i.country_code } }" class="relative" target="_blank">
+                    <img :src="i.main_image" class="w-30 h-30" :alt="i.title" loading="lazy"/>
+                    <!-- <button class="action-badge add-product" @click.prevent.stop="addProduct(i)">
+                      <span class="desc">Add To My Products</span>
+                      <i class="icon-product"></i>
+                    </button>
+                    <button class="action-badge add-list" @click.prevent.stop="addList(i)">
+                      <span class="desc">List</span>
+                      <i
+                      class="icon-list"></i>
+                    </button> -->
+                    <div class="-mt-5 flex justify-center absolute">
+                      <div class="absolute -top-2 -left-1 p-0.5 rounded-full" style="background: #FDA05E;">
+                        <svg t="1767581511789" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8954" width="32" height="32"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFFFFF" p-id="8955"></path><path d="M512 0c282.773333 0 512 229.226667 512 512S794.773333 1024 512 1024 0 794.773333 0 512 229.226667 0 512 0z m0 32C246.912 32 32 246.912 32 512S246.912 992 512 992 992 777.088 992 512 777.088 32 512 32z" fill="#EEEEEE" p-id="8956"></path><path d="M512 512m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#965E28" p-id="8957"></path><path d="M512 597.333333a85.333333 85.333333 0 0 0 85.333333-85.333333h32a117.333333 117.333333 0 0 1-234.666666 0H426.666667a85.333333 85.333333 0 0 0 85.333333 85.333333z" fill="#9BA160" p-id="8958"></path><path d="M341.333333 29.12v965.76C142.506667 924.586667 0 734.933333 0 512 0 289.066667 142.485333 99.413333 341.333333 29.12z" fill="#006A44" p-id="8959"></path><path d="M682.666667 29.141333C881.557333 99.413333 1024 289.066667 1024 512c0 222.933333-142.464 412.586667-341.333333 482.858667z" fill="#E40017" p-id="8960"></path></svg>
+                      </div>
+                      <div class="text-white pl-8 pr-2 rounded-full text-sm text-center" style="background: #FDA05E;">MX Stock</div>
+                    </div>
+                  </NuxtLink>
+                  <div class="ml-3">US${{ i.usd }}</div>
+                </div>
+              </div>
+              <div class="col-span-1 bg-gray-100 p-3">
+                <div>Ebay</div>
+                <div v-for="(i,n) in zoneEbay" :key="i.product_id+n" class="p-2 flex items-center productItems">
+                  <div class="mr-4">#{{ n+1 }}</div>
+                  <NuxtLink :to="{ path: '/productDetail', query: { id: i.product_id, source: i.source, code: i.country_code } }" class="relative" target="_blank">
+                    <img :src="i.main_image" class="w-30 h-30" :alt="i.title" loading="lazy"/>
+                    <!-- <button class="action-badge add-product" @click.prevent.stop="addProduct(i)">
+                      <span class="desc">Add To My Products</span>
+                      <i class="icon-product"></i>
+                    </button>
+                    <button class="action-badge add-list" @click.prevent.stop="addList(i)">
+                      <span class="desc">List</span>
+                      <i
+                      class="icon-list"></i>
+                    </button> -->
+                    <div class="-mt-5 flex justify-center absolute">
+                      <div class="absolute -top-2 -left-1 p-0.5 rounded-full" style="background: #FDA05E;">
+                        <svg t="1767581511789" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8954" width="32" height="32"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFFFFF" p-id="8955"></path><path d="M512 0c282.773333 0 512 229.226667 512 512S794.773333 1024 512 1024 0 794.773333 0 512 229.226667 0 512 0z m0 32C246.912 32 32 246.912 32 512S246.912 992 512 992 992 777.088 992 512 777.088 32 512 32z" fill="#EEEEEE" p-id="8956"></path><path d="M512 512m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#965E28" p-id="8957"></path><path d="M512 597.333333a85.333333 85.333333 0 0 0 85.333333-85.333333h32a117.333333 117.333333 0 0 1-234.666666 0H426.666667a85.333333 85.333333 0 0 0 85.333333 85.333333z" fill="#9BA160" p-id="8958"></path><path d="M341.333333 29.12v965.76C142.506667 924.586667 0 734.933333 0 512 0 289.066667 142.485333 99.413333 341.333333 29.12z" fill="#006A44" p-id="8959"></path><path d="M682.666667 29.141333C881.557333 99.413333 1024 289.066667 1024 512c0 222.933333-142.464 412.586667-341.333333 482.858667z" fill="#E40017" p-id="8960"></path></svg>
+                      </div>
+                      <div class="text-white pl-8 pr-2 rounded-full text-sm text-center" style="background: #FDA05E;">MX Stock</div>
+                    </div>
+                  </NuxtLink>
+                  <div class="ml-3">US${{ i.usd }}</div>
+                </div>
+              </div>
+              <div class="col-span-1 bg-gray-100 p-3">
+                <div>Shopee</div>
+                <div v-for="(i,n) in zoneShopee" :key="i.product_id+n" class="p-2 flex items-center productItems">
+                  <div class="mr-4">#{{ n+1 }}</div>
+                  <NuxtLink :to="{ path: '/productDetail', query: { id: i.product_id, source: i.source, code: i.country_code } }" class="relative" target="_blank">
+                    <img :src="i.main_image" class="w-30 h-30" :alt="i.title" loading="lazy"/>
+                    <!-- <button class="action-badge add-product" @click.prevent.stop="addProduct(i)">
+                      <span class="desc">Add To My Products</span>
+                      <i class="icon-product"></i>
+                    </button>
+                    <button class="action-badge add-list" @click.prevent.stop="addList(i)">
+                      <span class="desc">List</span>
+                      <i
+                      class="icon-list"></i>
+                    </button> -->
+                    <div class="-mt-5 flex justify-center absolute">
+                      <div class="absolute -top-2 -left-1 p-0.5 rounded-full" style="background: #FDA05E;">
+                        <svg t="1767581511789" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8954" width="32" height="32"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFFFFF" p-id="8955"></path><path d="M512 0c282.773333 0 512 229.226667 512 512S794.773333 1024 512 1024 0 794.773333 0 512 229.226667 0 512 0z m0 32C246.912 32 32 246.912 32 512S246.912 992 512 992 992 777.088 992 512 777.088 32 512 32z" fill="#EEEEEE" p-id="8956"></path><path d="M512 512m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#965E28" p-id="8957"></path><path d="M512 597.333333a85.333333 85.333333 0 0 0 85.333333-85.333333h32a117.333333 117.333333 0 0 1-234.666666 0H426.666667a85.333333 85.333333 0 0 0 85.333333 85.333333z" fill="#9BA160" p-id="8958"></path><path d="M341.333333 29.12v965.76C142.506667 924.586667 0 734.933333 0 512 0 289.066667 142.485333 99.413333 341.333333 29.12z" fill="#006A44" p-id="8959"></path><path d="M682.666667 29.141333C881.557333 99.413333 1024 289.066667 1024 512c0 222.933333-142.464 412.586667-341.333333 482.858667z" fill="#E40017" p-id="8960"></path></svg>
+                      </div>
+                      <div class="text-white pl-8 pr-2 rounded-full text-sm text-center" style="background: #FDA05E;">MX Stock</div>
+                    </div>
+                  </NuxtLink>
+                  <div class="ml-3">US${{ i.usd }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8">
+            <div class="flex justify-center items-center mb-4">
+              <img src="@/assets/images/rp.svg" class="w-8 mr-3" alt="Recommended Products" loading="lazy">
+              <div class="text-xl font-semibold">Recommended Products</div>
+            </div>
+            <div class="grid grid-cols-12 gap-3">
+              <div v-for="(i,n) in RecommendList" :key="n" class="productItem col-span-2">
+                <div class="relative">
+                  <NuxtLink :to="{ path: '/productDetail', query: { id: i.product_id, source: i.source, code: i.country_code } }" target="_blank">
+                    <img class="h-48 w-full object-cover rounded-t-md" :src="i.main_image" :alt="i.title" loading="lazy"/>
+                    <!-- <button class="action-badge add-product" @click.prevent.stop="addProduct(i)">
+                      <span class="desc">Add To My Products</span>
+                      <i class="icon-product"></i>
+                    </button>
+                    <button class="action-badge add-list" @click.prevent.stop="addList(i)">
+                      <span class="desc">List</span>
+                      <i
+                      class="icon-list"></i>
+                    </button> -->
+                    <div class="-mt-5 flex justify-center absolute">
+                      <div class="absolute -top-2 -left-1 p-0.5 rounded-full" style="background: #FDA05E;">
+                        <svg t="1767581511789" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="8954" width="32" height="32"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#FFFFFF" p-id="8955"></path><path d="M512 0c282.773333 0 512 229.226667 512 512S794.773333 1024 512 1024 0 794.773333 0 512 229.226667 0 512 0z m0 32C246.912 32 32 246.912 32 512S246.912 992 512 992 992 777.088 992 512 777.088 32 512 32z" fill="#EEEEEE" p-id="8956"></path><path d="M512 512m-64 0a64 64 0 1 0 128 0 64 64 0 1 0-128 0Z" fill="#965E28" p-id="8957"></path><path d="M512 597.333333a85.333333 85.333333 0 0 0 85.333333-85.333333h32a117.333333 117.333333 0 0 1-234.666666 0H426.666667a85.333333 85.333333 0 0 0 85.333333 85.333333z" fill="#9BA160" p-id="8958"></path><path d="M341.333333 29.12v965.76C142.506667 924.586667 0 734.933333 0 512 0 289.066667 142.485333 99.413333 341.333333 29.12z" fill="#006A44" p-id="8959"></path><path d="M682.666667 29.141333C881.557333 99.413333 1024 289.066667 1024 512c0 222.933333-142.464 412.586667-341.333333 482.858667z" fill="#E40017" p-id="8960"></path></svg>
+                      </div>
+                      <div class="text-white pl-8 pr-2 rounded-full text-sm text-center" style="background: #FDA05E;">MX Stock</div>
+                    </div>
+                  </NuxtLink>
+                  <div @click="getRelated(i.product_id,i.source)" class="cursor-pointer" style="position: absolute;left: 10px;bottom: 32px;padding: 3px;border-radius: 6px;background: #343434ed;">
+                    <svg t="1759043988270" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11218" width="28" height="28"><path d="M320 149.333333h-76.8q-61.653333 0-70.826667 4.736-12.074667 6.229333-18.304 18.261334Q149.333333 181.44 149.333333 242.56V320a42.666667 42.666667 0 1 1-85.333333 0v-77.44q0-43.178667 1.365333-59.498667 2.538667-29.952 12.949334-50.048 18.730667-36.053333 54.869333-54.762666 20.096-10.368 50.154667-12.885334Q199.744 64 243.2 64H320a42.666667 42.666667 0 1 1 0 85.333333z m460.8 0H704a42.666667 42.666667 0 1 1 0-85.333333h76.8q43.456 0 59.861333 1.365333 30.08 2.517333 50.133334 12.885334 36.16 18.688 54.890666 54.762666 10.410667 20.096 12.949334 50.048 1.365333 16.32 1.365333 59.498667V320a42.666667 42.666667 0 1 1-85.333333 0v-77.44q0-61.12-4.736-70.229333-6.229333-12.032-18.304-18.261334Q842.453333 149.333333 780.8 149.333333z m-105.856 465.28A234.666667 234.666667 0 0 0 725.333333 469.333333c0-129.6-105.066667-234.666667-234.666666-234.666666s-234.666667 105.066667-234.666667 234.666666 105.066667 234.666667 234.666667 234.666667a234.666667 234.666667 0 0 0 120-33.002667l84.48 84.501334a42.666667 42.666667 0 1 0 60.373333-60.330667l-80.554667-80.554667zM490.666667 320a149.333333 149.333333 0 1 1 0 298.666667 149.333333 149.333333 0 0 1 0-298.666667zM243.2 874.666667H320a42.666667 42.666667 0 1 1 0 85.333333h-76.8q-43.456 0-59.861333-1.365333-30.08-2.517333-50.133334-12.906667-36.16-18.666667-54.890666-54.741333-10.410667-20.096-12.949334-50.048Q64 824.64 64 781.44V704a42.666667 42.666667 0 1 1 85.333333 0v77.44q0 61.12 4.736 70.229333 6.229333 12.032 18.304 18.261334 9.173333 4.736 70.826667 4.736zM704 874.666667h76.8q61.653333 0 70.826667-4.736 12.074667-6.229333 18.304-18.261334 4.736-9.109333 4.736-70.229333V704a42.666667 42.666667 0 1 1 85.333333 0v77.44q0 43.178667-1.365333 59.498667-2.538667 29.952-12.949334 50.048-18.730667 36.053333-54.869333 54.741333-20.096 10.389333-50.154667 12.906667Q824.256 960 780.8 960H704a42.666667 42.666667 0 1 1 0-85.333333z" p-id="11219" fill="#FF7700"></path></svg>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <NuxtLink :to="{ path: '/productDetail', query: { id: i.product_id, source: i.source, code: i.country_code } }" target="_blank"><div class="productTitle">{{ i.title }}</div></NuxtLink>
+                  <p class="pt-2 font-semibold text-lg text-red-500">US${{ i.usd }}</p>
+                  <svg v-show="i.source == 5" t="1753172696272" class="icon" viewBox="0 0 3072 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11241" width="100" height="30"><path d="M2931.00339757 557.83384772c0 19.94712867-5.24663961 32.66775352-15.73991755 41.77512756-8.81039455 5.44462519-17.52179507 12.67112902-31.47983523 14.50250228h-15.73991754c-12.27515544 0-21.03605304-1.83137444-29.79695063-7.27599962-7.02851708-3.61325189-10.49327804-10.88925154-10.49327798-19.99662448 0-12.67112902 7.02851708-21.77850198 20.98655604-25.39175383 5.29613542-1.83137444 14.00753709-5.49412216 29.74745471-7.32549664h52.56538515v3.71224473z m85.77760201 87.16350589V507.00084418c0-29.10399854-10.49327804-50.83300469-31.43033939-67.26587426-19.3036725-14.50250227-52.46639235-21.77850198-96.32037582-21.77850309h-8.76089755c-40.29022972 0-68.30530277 3.66274774-91.07373732 18.16525117-20.98655718 12.72062486-33.16271988 32.66775352-36.7264737 56.32712687h87.60897532c1.68288467-12.72062486 13.95804012-27.27262405 40.24073275-27.27262527h8.7114005c14.05703293 0 24.50081513 3.66274774 31.52933217 10.88925156 7.02851708 3.61325189 10.49327804 12.67112902 10.493278 29.05450156v5.44462637h-50.78350772c-33.26171265 0-54.29776565 1.83137444-68.30530273 3.61325073-17.52179507 1.88087021-31.52933217 5.49412216-40.2902297 12.72062606a95.87490646 95.87490646 0 0 0-26.23319565 27.27262406c-5.29613542 10.88925154-7.07801291 23.60987643-7.07801286 39.94375318 0 23.60987643 7.02851708 39.94375315 21.03605295 50.83300474 20.2936041 13.31458403 44.05197023 20.2936041 68.3053028 20.04612142 19.3036725 0 36.7759706-1.88087021 52.51588825-7.32549662 19.3036725-5.44462519 45.53686814-19.99662447 52.51588939-34.49912798v5.44462639c0 16.33387675 1.73238043 27.27262405 7.02851585 29.10399852H3020.29525752c-1.73238043-1.83137444-3.46476213-7.27599962-3.46476212-12.72062593zM2262.15589377 557.83384772c0.3464766 15.09646147-4.60318345 29.89594446-14.00753716 41.77512756-12.22565965 5.44462519-19.25417558 12.67112902-33.26171267 14.50250228h-17.47229801c-12.22565965 0-22.76843465-1.83137444-28.0645701-7.27599962-6.92952309-5.44462519-10.39428521-10.88925154-10.39428521-19.99662448 0-12.67112902 6.97902006-21.77850198 20.93706028-25.39175383 10.19629844-3.66274774 20.78857047-6.13757835 31.52933093-7.32549664h50.73401194v3.71224473z m85.82709785 87.16350589V507.00084418c0-29.10399854-10.49327804-50.83300469-33.26171265-67.26587426-17.52179507-14.50250227-49.00163026-21.77850198-94.53849954-21.77850309h-8.7608976c-40.29022972 0-70.03768325 5.44462519-91.07373618 18.16525117-20.98655718 12.72062486-33.16271988 30.88587602-38.45885525 56.32712687h87.50998134a44.84391616 44.84391616 0 0 1 42.07210714-27.27262527h8.76089755c15.69042058 0 22.76843465 3.66274774 31.47983516 10.88925156 7.02851708 5.44462519 10.44378219 14.50250227 10.44378218 29.05450156v5.44462637h-50.73401194c-33.26171265 0-56.0301473 1.83137444-68.30530268 3.61325073-17.47229806 1.88087021-29.79695053 5.49412216-38.50835115 12.72062606-12.27515544 9.1073741-22.76843465 18.16525117-28.06457004 27.27262406-5.24663961 14.50250227-8.76089756 27.27262405-8.76089753 39.94375318 0 21.77850198 8.76089756 38.16187565 24.55031096 50.83300474 15.73991758 12.77012182 38.60734505 20.04612147 66.52342532 20.04612142 19.3036725 0 36.82546761-1.88087021 52.56538512-7.27599969 19.3036725-5.49412216 43.75499064-19.99662447 52.46639241-34.54862491v5.44462639c0 16.38337374 1.78187745 25.49074662 5.29613544 29.10399852h82.26334288c-1.73238043-1.83137444-3.46476213-7.27599962-3.46476094-12.72062593z m252.08616408-54.49575241c-8.71140057 10.88925154-24.50081513 16.33387675-45.43787536 16.33387674-21.03605304 0-36.82546761-5.44462519-47.36824255-16.33387674-10.39428521-10.83975451-15.73991758-27.22312829-15.7399176-50.83300353 0-25.39175386 5.29613542-45.38837831 15.7399176-58.10900433 12.27515544-12.67112902 28.06457005-18.16525117 47.36824255-18.16525116 19.2046797 0 34.99409312 5.49412216 45.43787536 18.16525116 10.49327804 12.72062486 15.8389104 30.88587602 15.83891039 54.49575243s-5.34563241 41.72563065-15.7894134 54.44625548z m75.33381981-139.8278839c-22.76843465-23.60987643-49.00163026-34.49912795-80.53096243-34.49912796a253.91753856 253.91753856 0 0 0-40.24073274 3.61325196 162.49732578 162.49732578 0 0 0-61.32628263 38.11237863V321.68558794h-87.50998253v308.75976639c0 7.32549659 0 18.16525117-1.78187742 27.27262526h87.50998243c0-5.44462519 1.78187745-9.1073741 1.78187752-16.33387673V615.94285204c12.22565965 14.50250227 24.50081513 27.27262405 47.26924977 39.94375312 14.05703293 7.22650269 36.72647483 9.1073741 49.05112605 9.10737412 36.7759706 0 66.52342531-10.88925154 85.77760198-34.54862495 19.3036725-21.77850198 29.79695053-52.61488217 29.79695053-90.77675666 0-39.94375315-10.54277503-68.9982547-29.79695053-88.99488037zM1931.2711477 590.5016012c-8.81039455 10.88925154-24.55031211 16.33387675-45.53686807 16.33387674-19.25417558 0-35.04359007-5.44462519-45.53686932-16.33387674-12.27515544-12.67112902-17.57129199-29.05450161-17.5712909-50.83300353 0-23.60987643 5.34563241-43.60650083 17.5712909-58.10900433 12.22565965-12.67112902 26.28269257-18.16525117 45.53686932-18.16525122 19.3036725 0 34.99409312 5.49412216 45.53686807 18.16525122 12.22565965 12.72062486 17.47229806 30.88587602 17.47229812 54.4957524s-5.24663961 41.72563065-17.47229812 54.44625551z m76.96720751-139.82788397c-22.76843465-23.60987643-49.00163026-34.49912795-82.26334287-34.49912789-14.00753709 0-28.01507308 1.78187745-40.24073271 3.61325194-21.03605304 7.27599962-45.53686814 23.60987643-61.27678691 38.11237862V321.68558794h-87.60897538v308.75976639c0 7.32549659 0 18.16525117-1.73238036 27.27262526h87.50998243c0-5.44462519 1.83137444-9.1073741 1.83137331-16.33387673V615.94285204c12.22565965 14.50250227 24.50081513 27.27262405 47.26924976 39.94375312 14.00753709 7.22650269 40.24073274 9.1073741 49.05112725 9.10737412 36.72647483 0 64.74154782-10.88925154 87.50998129-34.54862495 19.3036725-23.60987643 28.06457005-52.61488217 28.06457003-90.77675666 0-39.94375315-8.81039455-68.9982547-28.06457003-88.99488037zM1152.14522677 525.11659839l61.27678577-130.72051098 56.03014723 130.77000682h-117.306933v-0.04949584z m120.77169513-203.4310105H1162.68800178l-168.09044074 336.0323917h98.05275743l29.7969506-67.21637839h178.58371864l28.01507431 67.21637839h105.08127334l-161.11142056-336.03239165z m175.11895659 335.98289477h85.82709792V321.68558794h-85.82709792v335.98289472zM1589.84362662 387.12008775V321.73508378h91.07373747v65.38500396H1589.84362662z m1.7818775 270.59789184h87.60897531v-236.09876388h-87.60897531v236.0987639zM685.04584876 347.37432138a40.19123573 40.19123573 0 0 1 4.15771401 19.30367254 47.21975278 47.21975278 0 0 0-4.15771401-19.3036725z m-85.38162847 306.48292378c-37.36992974 2.62331923-33.756679-17.52179507-11.53270772-46.77428345 50.58552093-67.95882621 144.3815715-160.36897172 148.5887826-227.83283274C742.51139688 291.6411537 655.00141444 264.51701933 564.91760974 264.51701933 502.10642917 266.10091002 437.21639151 283.62270509 393.01593032 299.51111247 240.66540719 353.66038834 145.28546703 438.64604444 84.70163335 534.22397127c-62.71218779 94.53849833-43.21052853 185.36475319 92.21215868 187.98807247 102.30946438-4.25670687 171.3077191-32.86574028 240.89993301-68.99825473 0.49496637 0-193.48219462 55.7826635-265.20276254 14.8984758-7.91945578-4.25670687-15.73991758-10.14680261-17.81877458-26.53017631 0-33.4596994 54.79273198-68.45379257 86.96552032-79.64002256V504.62500751a219.02243821 219.02243821 0 0 0 206.64828868-32.37077387c2.12835404 5.84059873 4.25670687 13.21559116 3.76174179 21.23403977h10.9882443c2.67281618-22.91692441-12.62163206-45.14089573-37.91439296-46.77428345 7.32549659 5.89009457 12.67112902 10.59227194 15.2449512 14.89847471l-0.98993155 0.98993267-0.49496635 0.49496521c-84.34219997 59.54440525-166.11057646 31.87580757-173.98053532 30.29191687l46.9227732-46.22982009-13.16609418-33.50919641c93.35058007-32.91523608 170.31778757-56.87158906 298.31598535-79.64002249l-28.60903343-23.26340102 14.74998607-9.00838012c75.87828198 21.23403971 127.00826627 37.12244718 124.38494594 77.51166969-0.9899315 6.88002728-3.71224473 14.84897887-7.91945463 23.36239383-22.57044785 45.14089573-89.04437623 117.90089219-115.92102904 149.23223751-17.42280222 20.73907343-34.7961075 39.89425619-46.92277323 58.99994193-13.71055752 19.6006521-20.59058367 37.71640628-21.1350458 54.14927705 2.67281618 133.34383019 393.25045729-62.61319379 470.26716051-114.28764145-112.2582802 48.3581741-234.06940386 94.63749235-366.37380552 103.10141027v0.04949701z" fill="#FF6003" p-id="11242"></path></svg>
+                  <div style="margin-top: 7px;display: flex;justify-content: space-evenly;align-items: center;">
+                    <div class="chatbtn" @click="chatNows(i)">Chat Now</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ChatMini />
+    <BackTop />
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, onUnmounted, inject } from 'vue'
+import { getRate, getProductSearchOfferRecommendHandle, getHistoricalRecordRecommendations, getSpecialCategories, getUserTopCategoryData, getProductRelatedRecommend, addShopList, getCountry, getDefault } from '~/services/api'
+import ChatMini from '~/components/ChatMini.vue'
+definePageMeta({ layout: 'alimx' })
+const rate = ref(1)
+const zoneShopify = ref([])
+const zoneTiktok = ref([])
+const zoneEbay = ref([])
+const zoneShopee = ref([])
+const RecommendList = ref([])
+const historyList = ref([])
+const lookingList = ref([])
+const searchedList = ref([])
+const showCatePanels = ref(false)
+const catetree = ref([])
+const cateLists = ref([])
+const cateList = ref([])
+const iscate = ref(true)
+const cateName = ref('')
+const cateId = ref(0)
+const isLoading = ref(false)
+const isPage = ref(true)
+const page = ref(2)
+const relatedList = ref([])
+const dataLoading = ref(false)
+const showRelated = ref(false)
+const actionRegion = ref('')
+const chatText = inject('chatProduct')
+
+onMounted(()=>{
+  fetchAll()
+  initData()
+  getRate().then((rez)=>{
+    rate.value = rez.data.data.exchange_rate
+    getProductSearchOfferRecommendHandle({ type: 1, pageIndex: 1, pageCount: 24, ship_from: 'MX', }).then((res)=>{
+      const list = (res.data?.data?.data || []).map(item=>{
+        const usd = item.source==4 ? divide(parseFloat(item.priceInfo.price), rate.value) : Math.min(...item.skus[0].ladder_price.map(i=>i.price))
+        return { ...item, usd }
+      })
+      zoneShopify.value = list.slice(0,3)
+      zoneTiktok.value = list.slice(3,6)
+      zoneEbay.value = list.slice(6,9)
+      zoneShopee.value = list.slice(9,12)
+      RecommendList.value = list.slice(12,24)
+    })
+    getHistoricalRecordRecommendations({ type: 1, ship_from: 'MX' }).then((res)=>{
+      const list = (res.data?.data || []).map(item=>{
+        const usd = item.source==4 ? divide(parseFloat(item.priceInfo.price), rate.value) : Math.min(...item.skus[0].ladder_price.map(i=>i.price))
+        return { ...item, usd }
+      })
+      historyList.value = list.slice(0,4)
+      lookingList.value = list.slice(4,8)
+      searchedList.value = list.slice(8,12)
+    })
+  })
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
+function handleScroll(){
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop
+  const windowHeight = window.innerHeight || document.documentElement.clientHeight
+  const documentHeight = document.documentElement.scrollHeight
+  
+  // 当滚动到距离底部100px时触发加载
+  if (documentHeight - scrollTop < 1500) {
+    getPages()
+  }
+}
+
+async function getPages(){
+  if (isLoading.value || !isPage.value) return
+  isLoading.value = true
+  page.value++
+  try {
+    const res = await getProductSearchOfferRecommendHandle({
+      type: 1,
+      pageIndex: page.value,
+      pageCount: 12,
+      ship_from: 'MX',
+    })
+    const list = (res.data?.data?.data || []).map(item=>{
+      const usd = item.source==4 ? divide(parseFloat(item.priceInfo.price), rate.value) : Math.min(...item.skus[0].ladder_price.map(i=>i.price))
+      return { ...item, usd }
+    })
+    RecommendList.value = [...RecommendList.value, ...list]
+  } catch (error) {
+    console.error('加载失败:', error)
+    page.value--
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function divide(num1, num2){ const result = (num1*100)/(num2*100); return Math.round(result*100)/100 > 0 ? Math.round(result*100)/100 : 0.01 }
+
+function getCates(item, id){
+  catetree.value = item
+  cateId.value = id
+}
+
+async function fetchAll(){
+  const cats = await getSpecialCategories({})
+  cateLists.value = cats.data.data
+  cateList.value = cats.data.data
+}
+
+function resetCate(){
+  cateName.value = ''
+  cateList.value = cateLists.value
+  iscate.value = true
+}
+
+function getCateall(){
+  getUserTopCategoryData({
+    category_id: cateId.value
+  }).then((res)=>{
+    let alist = res.data.data
+    cateName.value = alist.name
+    cateList.value = alist.children
+    catetree.value = alist.children[0].children
+    iscate.value = false
+  })
+}
+
+function toSearch(text,name){
+  window.open('../specialAreas?id='+text+'&keyword='+name+'&code=MX', '_self')
+}
+
+function getRelated(id,source){
+  dataLoading.value = true
+  getProductRelatedRecommend({
+    offerId: id,
+    pageIndex: 1,
+    pageCount: 10,
+    type: 1,
+    source: source,
+  }).then((res)=>{
+    const alist = res.data.data.data
+    for (let i = 0; i < alist.length; i++) {
+      if (alist[i].skus?.[0]?.ladder_price?.length > 0) {
+        const arr = alist[i].skus[0].ladder_price.map(item => item.price)
+        const max = Math.max(...arr)
+        const min = Math.min(...arr)
+        
+        if (max === min) {
+          alist[i].priceRange = 'US $' + max
+        } else {
+          alist[i].priceRange = 'US $' + min + ' ~ $' + max
+        }
+      } else {
+        alist[i].priceRange = 'N/A'
+      }
+    }
+    relatedList.value = alist
+    showRelated.value = true
+    dataLoading.value = false
+  })
+}
+
+function chatNows(item) {
+  let productItem = {
+    id: item.product_id,
+    source: item.source,
+  }
+  localStorage.setItem("askProduct", JSON.stringify(productItem))
+  chatText()
+}
+
+function chatNow(item) {
+  if (!process.client) return
+  const userInfo = window.localStorage.getItem('userInfo')
+  let chatInfo
+  let username = ''
+  if (userInfo) {
+    const data = JSON.parse(userInfo)
+    chatInfo = data.manage
+    username = `${data.first_name} ${data.last_name}`.trim()
+  } else {
+    const cache = window.localStorage.getItem('chat_info')
+    if (!cache) return
+    const parsed = JSON.parse(cache)
+    chatInfo = parsed.manage
+    username = parsed.chat_id
+  }
+  const msg = {
+    page: 'Product',
+    product: item.subjectTrans,
+    link: `https://codropshipping.com/productDetail?id=${item.offerId}&source=${item.source}`
+  }
+  const text = `Customer: ${username} | Source: ${msg.page} | Product: ${msg.product} | Link: ${msg.link} `
+  window.open(`https://api.whatsapp.com/send?phone=${chatInfo.whatsappp}&text=${encodeURIComponent(text)}`, '_blank')
+}
+
+function addList(item) {
+  if (process.client) {
+    const url = `/admin/account/Publish?id=${item.product_id}&source=${item.source}`
+    window.open(url, '_blank')
+  }
+}
+
+function addProduct(item) {
+  if (process.client) {
+    addShopList({ source: item.source, goodsId: item.product_id, country_code: actionRegion.value }).then(res => {
+      window.open('/admin/account/ProductList', '_blank')
+    })
+  }
+}
+
+function initData() {
+  getCountry({}).then(res => {
+    let endCountry = res.data.data.endCountry
+    getDefault().then(req => {
+      for (let i = 0; i < endCountry.length; i++) {
+        if(req.data.data.name_en == endCountry[i].zh_cn_nickname){
+          actionRegion.value = endCountry[i].code_two
+          break
+        }
+      }
+    })
+  })
+}
+</script>
+
+<style scoped>
+.productItem{ border: 1px solid #eee; border-radius: 6px;  background: #fff }
+.productTitle{ display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.notice-bar {
+  height: 40px;
+  position: relative;
+}
+.notice-close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  cursor: pointer;
+}
+.notice-track {
+  flex: 1;
+  overflow: hidden;
+  height: 49px;
+  width: 100%;
+  color: #fff;
+  line-height: 49px;
+  font-size: 16px;
+  background-size: contain;
+  background-position: center;
+  background: #fffbe8;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: nowrap;
+  position: relative;
+}
+.noticeIcon{
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+}
+.notice-marquee {
+  flex: 0 0 auto;
+  width: auto;
+  height: 49px;
+  animation: carousel-animation 10s infinite linear;
+  padding-right: 60px;
+  max-width: 100%;
+}
+.notice-marquee span {
+  padding-right: 2rem; /* 每段之间的间距 */
+  color: #ff0d00;
+}
+/* 悬停可暂停（可选） */
+.notice-bar:hover .notice-marquee {
+  animation-play-state: paused;
+}
+
+@keyframes carousel-animation {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-100%));
+  }
+}
+
+.co-mask {
+  position: fixed;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.38);
+  width: 100vw;
+  height: 100vh;
+  left: 0;
+  top: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.relatedModal {
+  padding: 20px;
+  width: 1174px;
+  border-radius: 6px;
+  background: #fff;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.co-loading {
+  position: fixed;
+  left: calc(50% - 45px);
+  top: calc(50% - 45px);
+  z-index: 50;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1.2s linear infinite;
+}
+
+.productItem {
+  width: 200px;
+  margin: 0 auto;
+}
+
+.chatbtn {
+  border: 1px solid #5e5e5e;
+  border-radius: 24px;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  min-width: 130px;
+  color: #000;
+}
+
+.icon-product, .icon-list{
+  margin-right: 0;
+}
+.icon-product::before{
+  content: '';
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  display: block;
+  background: url('@/assets/images/addProduct.png') center center no-repeat;
+}
+
+.icon-list::before{
+  content: '';
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  display: block;
+  background: url('@/assets/images/addList.png') center center no-repeat;
+}
+
+.action-badge:hover .desc {
+  display: inline-block;
+}
+
+.desc {
+  display: none;
+  font-size: 12px;
+  margin-left: 4px;
+  margin-right: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;
+}
+
+.action-badge {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #f70;
+  color: #fff;
+  padding: 7px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity .2s;
+  gap: 6px;
+}
+
+.productItems:hover .action-badge {
+  opacity: 1;
+}
+
+.productItem:hover .action-badge {
+  opacity: 1;
+}
+
+.action-badge .icon-img {
+  width: 18px;
+  height: 18px;
+}
+
+.add-product {
+  bottom: 60px;
+}
+
+.add-list {
+  bottom: 22px;
+}
+</style>

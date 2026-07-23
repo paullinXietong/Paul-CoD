@@ -1,0 +1,41 @@
+{
+  auto_https disable_redirects
+}
+
+cosourcings.com, www.cosourcings.com {
+  encode zstd gzip
+
+  @admin path /admin /admin/*
+  handle @admin {
+    reverse_proxy https://codropshipping.com {
+      header_up Host codropshipping.com
+      transport http {
+        tls_server_name codropshipping.com
+      }
+    }
+  }
+
+  @api path /api /api/*
+  handle @api {
+    reverse_proxy https://codropshipping.com {
+      header_up Host codropshipping.com
+      transport http {
+        tls_server_name codropshipping.com
+      }
+    }
+  }
+
+  handle_path /mall-api/* {
+    reverse_proxy https://v2.cargosoon.online {
+      header_up Host v2.cargosoon.online
+      transport http {
+        tls_server_name v2.cargosoon.online
+      }
+    }
+  }
+
+  handle {
+    reverse_proxy web:3000
+  }
+}
+

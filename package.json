@@ -1,0 +1,32 @@
+{
+  "name": "codropshipping-nuxt",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "build:test": "dotenv -e .env.test -- nuxt build",
+    "generate": "nuxt generate",
+    "generate:test": "dotenv -e .env.test -- nuxt generate",
+    "preview": "nuxt preview"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@nuxtjs/tailwindcss": "^6.6.6",
+    "@pinia/nuxt": "^0.6.1",
+    "@vueuse/core": "^11.1.0",
+    "axios": "^1.7.7",
+    "dayjs-nuxt": "^2.1.11",
+    "element-plus": "^2.11.8",
+    "markdown-it": "^14.1.0",
+    "nuxt": "^3.13.2",
+    "nuxt-swiper": "^2.0.1",
+    "pinia": "^2.2.6",
+    "swiper": "^9.4.1",
+    "ua-parser-js": "^2.0.10"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^7.4.2",
+    "sass": "^1.94.2"
+  }
+}
