@@ -20,6 +20,35 @@ The existing live facet endpoint returned an empty parsing result for tested key
 
 ## Decisions
 
+### Deployment architecture
+
+- Add a separate `search-api` Node service to the Codropshipping deployment.
+- Route only `/search-api/*` to the new service. Existing `/api`, `/admin`, `/mall-api` and logistics routes remain unchanged.
+- Connect the service to the existing MySQL container through an explicit external Docker network.
+- Use a dedicated database or dedicated `product_search_*` tables and a least-privilege database user.
+- Limit the search service to 256 MB memory and cap upstream indexing concurrency to protect the current 3.4 GB server.
+- Protect indexing and supplier-profile write endpoints with an admin token. Public endpoints remain read-only and rate-limited.
+
+### Search indexing lifecycle
+
+1. A first-time keyword request returns the upstream first page and creates a query-index job.
+2. The worker fetches additional upstream search pages with bounded concurrency and records query membership.
+3. Search-result fields become globally filterable when the query index is complete.
+4. Detail-only attributes are indexed asynchronously with stricter rate limits and coverage reporting.
+5. The frontend enables each filter only when the API reports sufficient coverage and a complete query index.
+6. Popular queries and categories are refreshed on a schedule using upstream modification timestamps where available.
+
+The UI MUST show an honest preparing-filters state while indexing is incomplete. It MUST NOT present partial local filtering as complete.
+
+### Search backend storage
+
+- `product_search_products`: normalized fields available in keyword search results.
+- `product_search_query_memberships`: products belonging to a normalized keyword and category query.
+- `product_search_attributes`: normalized detail attributes and values.
+- `product_search_inventory`: product and SKU inventory, tier pricing, origin, weight and volume.
+- `product_search_supplier_profiles`: governed supplier metadata and missing business fields.
+- `product_search_jobs`: indexing status, coverage, retry count and last error.
+
 ### Filter capability model
 
 Each filter definition will use one capability state:
@@ -112,7 +141,6 @@ These fields require a backend source and governance rule before public use.
 
 ## Open Questions
 
-- The backend source repository and database schema are not present in the current workspace.
+- The existing product API source is not on the server, so the new service will integrate through the current production API rather than modifying it.
 - The business meaning of each `sellerIdentities` value needs confirmation before customer-facing translation.
 - Supplier audit and OEM/ODM data require an authoritative source owner.
-

@@ -109,52 +109,12 @@ function option(groupId: string, node: IndexedTaxonomyNode): ProductFilterOption
   }
 }
 
-function queryOption(groupId: string, slug: string, translateName: string, query: string): ProductFilterOption {
-  return {
-    id: `refinement:${groupId}:${slug}`,
-    groupId: `refinement:${groupId}`,
-    translateName,
-    query
-  }
-}
-
-export const universalProductFilters: ProductFilterGroup[] = [
-  {
-    id: 'refinement:attributes',
-    translateName: 'Product attributes',
-    children: [
-      queryOption('attributes', 'durable', 'Durable', 'durable'),
-      queryOption('attributes', 'lightweight', 'Lightweight', 'lightweight'),
-      queryOption('attributes', 'waterproof', 'Waterproof', 'waterproof'),
-      queryOption('attributes', 'eco-friendly', 'Eco-friendly', 'eco friendly'),
-      queryOption('attributes', 'portable', 'Portable', 'portable'),
-      queryOption('attributes', 'disposable', 'Disposable', 'disposable'),
-      queryOption('attributes', 'reusable', 'Reusable', 'reusable'),
-      queryOption('attributes', 'professional', 'Professional grade', 'professional grade')
-    ]
-  },
-  {
-    id: 'refinement:supply',
-    translateName: 'Supply options',
-    children: [
-      queryOption('supply', 'ready-stock', 'Ready stock', 'ready stock'),
-      queryOption('supply', 'factory-direct', 'Factory direct', 'factory direct'),
-      queryOption('supply', 'wholesale', 'Wholesale', 'wholesale'),
-      queryOption('supply', 'low-moq', 'Low MOQ', 'low MOQ'),
-      queryOption('supply', 'oem-odm', 'OEM / ODM', 'OEM ODM'),
-      queryOption('supply', 'customizable', 'Customizable', 'customizable'),
-      queryOption('supply', 'dropshipping', 'Dropshipping', 'dropshipping'),
-      queryOption('supply', 'private-label', 'Private label', 'private label')
-    ]
-  }
-]
-
 export function buildProductTaxonomyFilters(
   roots: ProductTaxonomyNode[],
   keyword: string,
   categoryId?: string
 ): ProductFilterGroup[] {
-  if (!Array.isArray(roots) || !roots.length) return universalProductFilters
+  if (!Array.isArray(roots) || !roots.length) return []
 
   const { all, byId } = indexTaxonomy(roots)
   const exactCategory = categoryId ? byId.get(String(categoryId)) : undefined
@@ -163,7 +123,7 @@ export function buildProductTaxonomyFilters(
     .filter(item => item.score > 0)
     .sort((a, b) => b.score - a.score)[0]?.node
 
-  if (!matched) return universalProductFilters
+  if (!matched) return []
 
   const queryTokens = tokens(keyword || matched.translatedName)
   const matchedTokens = new Set(tokens(matched.translatedName))
@@ -218,11 +178,7 @@ export function buildProductTaxonomyFilters(
     }
   }
 
-  if (!groups.length) return universalProductFilters
-  const specificGroups = groups.slice(0, 2)
-  return specificGroups.length === 1
-    ? [...specificGroups, universalProductFilters[1]]
-    : specificGroups
+  return groups.slice(0, 2)
 }
 
 export function isLocalFilterId(id: string | number) {

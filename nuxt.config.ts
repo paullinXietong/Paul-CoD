@@ -8,6 +8,7 @@ export default defineNuxtConfig({
       loginUrl: process.env.NUXT_PUBLIC_LOGIN_URL || 'https://test-codrop.cargosoon.online/admin/login',
       wssUrl: process.env.NUXT_PUBLIC_WSS_URL || 'wss://testchat.cargosoon.online/wss',
       mallBaseUrl: process.env.NUXT_PUBLIC_MALL_BASE_URL || 'https://cc.cargosoon.online',
+      searchBaseUrl: process.env.NUXT_PUBLIC_SEARCH_BASE_URL || '/search-api',
       newUserShippingCouponEnabled: process.env.NUXT_PUBLIC_NEW_USER_SHIPPING_COUPON_ENABLED !== 'false'
     }
   },
@@ -79,6 +80,11 @@ export default defineNuxtConfig({
           changeOrigin: true,
           secure: true,
           rewrite: (path) => path.replace(/^\/mall-api/, '')
+        },
+        '/search-api': {
+          target: process.env.NUXT_DEV_SEARCH_TARGET || 'http://127.0.0.1:8788',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/search-api/, '')
         }
       },
       hmr: {

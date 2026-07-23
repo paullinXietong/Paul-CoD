@@ -13,6 +13,7 @@ ARG NUXT_PUBLIC_ORDER_URL=/admin/order
 ARG NUXT_PUBLIC_LOGIN_URL=/admin/login
 ARG NUXT_PUBLIC_WSS_URL=wss://chat.co-logistics.cn/wss
 ARG NUXT_PUBLIC_MALL_BASE_URL=/mall-api
+ARG NUXT_PUBLIC_SEARCH_BASE_URL=/search-api
 ARG NUXT_PUBLIC_NEW_USER_SHIPPING_COUPON_ENABLED=false
 
 ENV NODE_ENV=production \
@@ -21,6 +22,7 @@ ENV NODE_ENV=production \
     NUXT_PUBLIC_LOGIN_URL=${NUXT_PUBLIC_LOGIN_URL} \
     NUXT_PUBLIC_WSS_URL=${NUXT_PUBLIC_WSS_URL} \
     NUXT_PUBLIC_MALL_BASE_URL=${NUXT_PUBLIC_MALL_BASE_URL} \
+    NUXT_PUBLIC_SEARCH_BASE_URL=${NUXT_PUBLIC_SEARCH_BASE_URL} \
     NUXT_PUBLIC_NEW_USER_SHIPPING_COUPON_ENABLED=${NUXT_PUBLIC_NEW_USER_SHIPPING_COUPON_ENABLED}
 
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -42,4 +44,3 @@ COPY --from=builder --chown=appuser:nodejs /app/.output ./.output
 USER appuser
 EXPOSE 3000
 CMD ["node", ".output/server/index.mjs"]
-

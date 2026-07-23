@@ -110,12 +110,22 @@ function createAxiosMall(){
   return instance
 }
 
+function createSearchAxios() {
+  const config = useRuntimeConfig()
+  return axios.create({
+    baseURL: config.public.searchBaseUrl,
+    timeout: 45000,
+    headers: { 'Content-Type': 'application/json' }
+  })
+}
+
 export function getDetail(data:any){ return createAxios().post('/shipping/Goods/ProductSearchQueryProductDetail', data) }
 export function addShopList(data:any){ return createAxios().post('/shipping/Order/addToGoodsList', data) }
 export function addCartList(data:any){ return createAxios().post('/shipping/Order/addToCart', data) }
 export function getCategory(data:any){ return createAxios().post('/shipping/Category/CategoryTranslationGetById', data) }
 export function getRecommend(data:any){ return createAxios().post('/shipping/Goods/ProductSearchOfferRecommend', data) }
 export function searchKeyword(data:any){ return createAxios().post('/shipping/Goods/ProductSearchKeywordQuery', data) }
+export function searchProcurementProducts(data:any){ return createSearchAxios().post('/v1/search', data) }
 export function getImgId(data:any){ return createAxios().post('/shipping/Goods/ProductImageUpload', data) }
 export function searchImg(data:any){ return createAxios().post('/shipping/Goods/ProductSearchImageQueryParam', data) }
 export function getInfo(data:any){ return createAxios().post('/customer/api/polymerization/getUserInfoFromCode', data) }

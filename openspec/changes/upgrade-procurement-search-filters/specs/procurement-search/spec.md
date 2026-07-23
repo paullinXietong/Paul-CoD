@@ -70,3 +70,37 @@ The search redesign MUST preserve existing storefront and member-center navigati
 #### Scenario: Buyer opens an existing action
 - **WHEN** the buyer opens product detail, chat, sourcing list, login, registration or cart from the redesigned page
 - **THEN** the existing route and target behavior SHALL remain unchanged
+
+### Requirement: Server-Side Search Index
+The system SHALL maintain a server-side query index so procurement filters apply to the complete indexed result set before pagination.
+
+#### Scenario: First-time keyword is not indexed
+- **WHEN** a buyer searches for a keyword without a complete query index
+- **THEN** the system SHALL return the upstream first page
+- **AND** SHALL start a bounded background indexing job
+- **AND** SHALL report that complete filters are still being prepared
+
+#### Scenario: Query index is complete
+- **WHEN** a buyer applies supported filters to a completely indexed query
+- **THEN** the backend SHALL apply every filter before pagination
+- **AND** SHALL return the filtered total and facet counts
+
+### Requirement: Search Index Isolation
+The product-search backend MUST use isolated routes, storage and resource limits so existing production services are not disrupted.
+
+#### Scenario: Search backend is deployed
+- **WHEN** the new backend starts in production
+- **THEN** only `/search-api/*` SHALL route to it
+- **AND** existing `/api`, `/admin`, `/mall-api` and logistics routes SHALL retain their current destinations
+
+### Requirement: Governed Supplier Profile Data
+Supplier years, audit status, response time, sample availability, production lead time and OEM/ODM support MUST come from an authenticated supplier-profile source.
+
+#### Scenario: Supplier profile has no governed value
+- **WHEN** a supplier profile field is empty or unverified
+- **THEN** the corresponding public filter and product claim MUST remain unavailable
+
+#### Scenario: Authorized profile data is imported
+- **WHEN** an authorized administrator imports a valid supplier profile
+- **THEN** the backend SHALL validate and store the source metadata
+- **AND** the field MAY become available after index refresh

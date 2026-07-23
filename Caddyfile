@@ -34,8 +34,11 @@ cosourcings.com, www.cosourcings.com {
     }
   }
 
+  handle_path /search-api/* {
+    reverse_proxy search-api:8788
+  }
+
   handle {
     reverse_proxy web:3000
   }
 }
-

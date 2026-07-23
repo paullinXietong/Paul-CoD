@@ -11,13 +11,15 @@ The current search page uses an oversized filter panel, mixes category refinemen
 - Add filter controls for category, price, MOQ, fulfillment, supplier quality and category-specific specifications.
 - Apply only filters that have correct all-results semantics. Filters that need backend support MUST remain unavailable in the public interface until the backend contract is implemented.
 - Define backend search-index and supplier-profile fields for inventory, tier pricing, normalized product attributes, supplier years, audit status, response time, sample availability, production lead time and explicit OEM/ODM support.
+- Add a dedicated product-search backend service on the existing server, exposed under `/search-api`, without changing the existing logistics, member-center or upstream `/api` services.
+- Add isolated MySQL search-index tables, background indexing jobs, facet endpoints and protected supplier-profile import endpoints.
 - Preserve existing route paths, navigation labels, login, registration, cart and product-detail links.
 
 ## Impact
 - Affected specs: `procurement-search`
 - Affected frontend code: `pages/searchResult.vue`, `data/productTaxonomy.ts`, new typed search-filter configuration and optional reusable filter components
-- Affected services: `services/api.ts` after backend endpoints are available
-- Backend contract required: server-side price range, MOQ, fulfillment, supplier score and indexed product-attribute filters
-- Data model required: normalized product search index and supplier search profile
+- Affected services: `services/api.ts`, new product-search API container and Caddy `/search-api` routing
+- Backend implementation: server-side price range, MOQ, fulfillment, supplier score and indexed product-attribute filters
+- Data model: isolated normalized product search index, query membership and supplier search profile tables in the existing MySQL service
+- Existing server: the installed logistics API is unrelated and will remain unchanged
 - Deployment: frontend changes will be verified locally first and will not be deployed until explicitly approved
-

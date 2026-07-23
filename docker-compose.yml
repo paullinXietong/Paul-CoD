@@ -9,6 +9,7 @@ services:
         NUXT_PUBLIC_LOGIN_URL: /admin/login
         NUXT_PUBLIC_WSS_URL: wss://chat.co-logistics.cn/wss
         NUXT_PUBLIC_MALL_BASE_URL: /mall-api
+        NUXT_PUBLIC_SEARCH_BASE_URL: /search-api
         NUXT_PUBLIC_NEW_USER_SHIPPING_COUPON_ENABLED: "false"
     image: coddrop-sourcing-ui:latest
     environment:
@@ -17,11 +18,44 @@ services:
       NITRO_HOST: 0.0.0.0
       NITRO_PORT: 3000
     restart: unless-stopped
+    networks:
+      - search_internal
+
+  search-api:
+    build:
+      context: ./search-backend
+      dockerfile: Dockerfile
+    image: coddrop-search-api:latest
+    environment:
+      PORT: 8788
+      DB_HOST: ${SEARCH_DB_HOST:-cargosoon-production-mysql-1}
+      DB_PORT: ${SEARCH_DB_PORT:-3306}
+      DB_NAME: ${SEARCH_DB_NAME:-cargosoon}
+      DB_USER: ${SEARCH_DB_USER:-product_search}
+      DB_PASSWORD: ${SEARCH_DB_PASSWORD:?Set SEARCH_DB_PASSWORD}
+      UPSTREAM_API_BASE: ${SEARCH_UPSTREAM_API_BASE:-https://codropshipping.com/api}
+      SEARCH_ADMIN_TOKEN: ${SEARCH_ADMIN_TOKEN:?Set SEARCH_ADMIN_TOKEN}
+      INDEX_CONCURRENCY: ${SEARCH_INDEX_CONCURRENCY:-2}
+      INDEX_PAGE_SIZE: ${SEARCH_INDEX_PAGE_SIZE:-50}
+      MAX_INDEX_PRODUCTS: ${SEARCH_MAX_INDEX_PRODUCTS:-2000}
+      DETAIL_INDEX_ENABLED: ${SEARCH_DETAIL_INDEX_ENABLED:-true}
+      DETAIL_INDEX_CONCURRENCY: ${SEARCH_DETAIL_INDEX_CONCURRENCY:-1}
+      DETAIL_INDEX_BATCH_SIZE: ${SEARCH_DETAIL_INDEX_BATCH_SIZE:-50}
+      DETAIL_INDEX_DELAY_MS: ${SEARCH_DETAIL_INDEX_DELAY_MS:-250}
+      DETAIL_FILTER_COVERAGE_THRESHOLD: ${SEARCH_DETAIL_FILTER_COVERAGE_THRESHOLD:-0.9}
+      PUBLIC_RATE_LIMIT_PER_MINUTE: ${SEARCH_PUBLIC_RATE_LIMIT_PER_MINUTE:-90}
+    mem_limit: 256m
+    cpus: 0.75
+    restart: unless-stopped
+    networks:
+      - search_internal
+      - logistics_db
 
   caddy:
     image: caddy:2-alpine
     depends_on:
       - web
+      - search-api
     ports:
       - "443:443"
     volumes:
@@ -29,8 +63,15 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
+    networks:
+      - search_internal
 
 volumes:
   caddy_data:
   caddy_config:
 
+networks:
+  search_internal:
+  logistics_db:
+    external: true
+    name: ${SEARCH_DB_NETWORK:-cargosoon-production_default}
