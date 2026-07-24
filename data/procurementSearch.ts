@@ -10,6 +10,14 @@ export type FilterCapability = {
 export type SearchCapabilities = {
   indexStatus: 'not_started' | 'building' | 'complete' | 'failed'
   coverage: number
+  queue?: {
+    activeQueryJobs: number
+    queuedQueryJobs: number
+    activeDetailJobs: number
+    queuedDetailJobs: number
+    queryQueuePosition: number
+    detailQueuePosition: number
+  }
   filters: Record<string, FilterCapability>
 }
 
@@ -142,6 +150,7 @@ export function cloneCapabilities(value?: Partial<SearchCapabilities> | null): S
   return {
     indexStatus: value?.indexStatus || defaultCapabilities.indexStatus,
     coverage: Number(value?.coverage || 0),
+    queue: value?.queue,
     filters: Object.fromEntries(
       Object.entries(defaultCapabilities.filters).map(([key, fallback]) => [
         key,

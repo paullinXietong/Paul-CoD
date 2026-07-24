@@ -16,7 +16,12 @@ const DETAIL_ENABLED = String(process.env.DETAIL_INDEX_ENABLED || 'true') === 't
 const DETAIL_CONCURRENCY = Math.max(1, Math.min(Number(process.env.DETAIL_INDEX_CONCURRENCY || 1), 2))
 const DETAIL_BATCH_SIZE = Math.max(10, Math.min(Number(process.env.DETAIL_INDEX_BATCH_SIZE || 50), 100))
 const DETAIL_DELAY_MS = Math.max(0, Number(process.env.DETAIL_INDEX_DELAY_MS || 250))
+const MAX_ACTIVE_QUERY_JOBS = Math.max(1, Math.min(Number(process.env.MAX_ACTIVE_QUERY_JOBS || 1), 3))
+const MAX_ACTIVE_DETAIL_JOBS = Math.max(1, Math.min(Number(process.env.MAX_ACTIVE_DETAIL_JOBS || 1), 2))
 const activeJobs = new Set()
+const pendingJobs = new Map()
+const activeDetailJobs = new Set()
+const pendingDetailJobs = new Map()
 
 export function normalizeKeyword(value = '') {
   return String(value).trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 255)
@@ -34,8 +39,6 @@ async function runInBatches(values, limit, worker) {
 }
 
 async function runIndex({ keyword, categoryId, hash }) {
-  if (activeJobs.has(hash)) return
-  activeJobs.add(hash)
   let indexed = 0
   let expected = 0
   try {
@@ -88,9 +91,7 @@ async function runIndex({ keyword, categoryId, hash }) {
         : `Upstream pagination ended at ${Math.round(completionRatio * 100)}% coverage`
     })
     if (DETAIL_ENABLED && completionRatio >= 0.9) {
-      setImmediate(() => runDetailIndex({ hash }).catch((error) => {
-        console.error(`Detail indexing failed for ${hash}`, error)
-      }))
+      enqueueDetailIndex({ hash })
     }
   } catch (error) {
     console.error(`Indexing failed for ${keyword}/${categoryId || 'all'}`, error)
@@ -103,8 +104,6 @@ async function runIndex({ keyword, categoryId, hash }) {
       expectedProducts: expected,
       error: error?.message || error
     }).catch(() => {})
-  } finally {
-    activeJobs.delete(hash)
   }
 }
 
@@ -119,10 +118,66 @@ async function runDetailIndex({ hash }) {
     await updateDetailProgress(hash)
     candidates = await getDetailCandidates(hash, DETAIL_BATCH_SIZE)
   }
+  await updateDetailProgress(hash)
 }
 
 export function enqueueIndex(input) {
-  setImmediate(() => runIndex(input))
+  if (activeJobs.has(input.hash) || pendingJobs.has(input.hash)) return
+  pendingJobs.set(input.hash, input)
+  setImmediate(pumpIndexQueue)
+}
+
+function pumpIndexQueue() {
+  while (activeJobs.size < MAX_ACTIVE_QUERY_JOBS && pendingJobs.size) {
+    const [hash, input] = pendingJobs.entries().next().value
+    pendingJobs.delete(hash)
+    activeJobs.add(hash)
+    runIndex(input)
+      .catch(error => console.error(`Unhandled query index error for ${hash}`, error))
+      .finally(() => {
+        activeJobs.delete(hash)
+        setImmediate(pumpIndexQueue)
+      })
+  }
+}
+
+export function enqueueDetailIndex(input) {
+  if (!DETAIL_ENABLED || activeDetailJobs.has(input.hash) || pendingDetailJobs.has(input.hash)) return
+  pendingDetailJobs.set(input.hash, input)
+  setImmediate(pumpDetailQueue)
+}
+
+function pumpDetailQueue() {
+  while (activeDetailJobs.size < MAX_ACTIVE_DETAIL_JOBS && pendingDetailJobs.size) {
+    const [hash, input] = pendingDetailJobs.entries().next().value
+    pendingDetailJobs.delete(hash)
+    activeDetailJobs.add(hash)
+    runDetailIndex(input)
+      .catch(error => console.error(`Detail indexing failed for ${hash}`, error))
+      .finally(() => {
+        activeDetailJobs.delete(hash)
+        setImmediate(pumpDetailQueue)
+      })
+  }
+}
+
+export function queueState(queryHashes = []) {
+  const pendingHashes = [...pendingJobs.keys()]
+  const detailPendingHashes = [...pendingDetailJobs.keys()]
+  const positions = queryHashes
+    .map(hash => pendingHashes.indexOf(hash))
+    .filter(position => position >= 0)
+  const detailPositions = queryHashes
+    .map(hash => detailPendingHashes.indexOf(hash))
+    .filter(position => position >= 0)
+  return {
+    activeQueryJobs: activeJobs.size,
+    queuedQueryJobs: pendingJobs.size,
+    activeDetailJobs: activeDetailJobs.size,
+    queuedDetailJobs: pendingDetailJobs.size,
+    queryQueuePosition: positions.length ? Math.min(...positions) + 1 : 0,
+    detailQueuePosition: detailPositions.length ? Math.min(...detailPositions) + 1 : 0
+  }
 }
 
 export async function queryIndexState(queryHashes) {
@@ -145,6 +200,7 @@ export async function queryIndexState(queryHashes) {
     status: complete ? 'complete' : failed ? 'failed' : states.some(Boolean) ? 'building' : 'not_started',
     coverage: expected > 0 ? Math.min(indexed / expected, 1) : 0,
     detailCoverage: expected > 0 ? Math.min(detailIndexed / expected, 1) : 0,
-    jobs
+    jobs,
+    queue: queueState(queryHashes)
   }
 }

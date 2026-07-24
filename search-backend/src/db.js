@@ -40,6 +40,11 @@ function asNumber(value) {
   return Number.isFinite(number) ? number : null
 }
 
+function asBoundedNumber(value, max) {
+  const number = asNumber(value)
+  return number !== null && Math.abs(number) <= max ? number : null
+}
+
 function asBoolean(value) {
   return value === true || value === 1 || value === '1' ? 1 : 0
 }
@@ -270,6 +275,7 @@ export async function storeProductDetail({ offerId, source = '', detail }) {
     const length = Number(shipping.length || shipping.packageLength || 0)
     const width = Number(shipping.width || shipping.packageWidth || 0)
     const height = Number(shipping.height || shipping.packageHeight || 0)
+    const volume = length && width && height ? length * width * height : null
     const certificateTypes = (detail.certificateList || [])
       .map(certificate => certificate.certificateType || certificate.type || certificate.name)
       .filter(Boolean)
@@ -287,12 +293,12 @@ export async function storeProductDetail({ offerId, source = '', detail }) {
     `, [
       String(offerId),
       String(source || ''),
-      Number.isFinite(totalInventory) ? totalInventory : null,
+      asBoundedNumber(Math.trunc(totalInventory), 2147483647),
       priceRanges.length > 1 ? 1 : 0,
       JSON.stringify(priceRanges),
-      shipping.sendGoodsAddressText || shipping.sendGoodsAddress || null,
-      asNumber(shipping.weight ?? shipping.packageWeight),
-      length && width && height ? length * width * height : null,
+      String(shipping.sendGoodsAddressText || shipping.sendGoodsAddress || '').slice(0, 255) || null,
+      asBoundedNumber(shipping.weight ?? shipping.packageWeight, 99999999999999),
+      asBoundedNumber(volume, 99999999999999),
       JSON.stringify(certificateTypes)
     ])
     await connection.commit()
@@ -446,6 +452,40 @@ export async function queryFacets({ queryHashes, filters }) {
     ORDER BY facetCount DESC
     LIMIT 160
   `, [...queryHashes, ...filter.params])
+  const categorySelect = (column, level) => `
+    SELECT
+      p.${column} AS categoryId,
+      ${level} AS categoryLevel,
+      p.offer_id AS offerId,
+      p.source AS source
+    FROM product_search_products p
+    JOIN product_search_query_memberships m
+      ON m.offer_id=p.offer_id AND m.source=p.source
+    WHERE m.query_hash IN (${placeholders})
+      AND p.${column} IS NOT NULL
+      AND p.${column} <> ''
+      ${filter.sql}
+  `
+  const [categoryRows] = await pool.query(`
+    SELECT
+      categoryId,
+      categoryLevel,
+      COUNT(DISTINCT CONCAT(offerId, '\\0', source)) AS facetCount
+    FROM (
+      ${categorySelect('top_category_id', 1)}
+      UNION ALL
+      ${categorySelect('second_category_id', 2)}
+      UNION ALL
+      ${categorySelect('third_category_id', 3)}
+    ) result_categories
+    GROUP BY categoryId, categoryLevel
+    ORDER BY categoryLevel DESC, facetCount DESC
+    LIMIT 80
+  `, [
+    ...queryHashes, ...filter.params,
+    ...queryHashes, ...filter.params,
+    ...queryHashes, ...filter.params
+  ])
   const attributeGroups = new Map()
   attributeRows.forEach((row) => {
     if (!attributeGroups.has(row.facetKey)) {
@@ -462,6 +502,11 @@ export async function queryFacets({ queryHashes, filters }) {
   })
   return {
     summary: rows[0] || {},
+    categories: categoryRows.map(row => ({
+      categoryId: String(row.categoryId),
+      level: Number(row.categoryLevel),
+      count: Number(row.facetCount)
+    })),
     attributes: [...attributeGroups.values()].slice(0, 10)
   }
 }

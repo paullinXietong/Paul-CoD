@@ -69,9 +69,11 @@
                         @change="toggleCategory(child)">
                       <span class="custom-check">✓</span>
                       <span>{{ child.translateName }}</span>
+                      <small v-if="child.count">{{ formatCompactNumber(child.count) }}</small>
                     </label>
                   </div>
                 </div>
+                <p v-else-if="loading" class="popover-note">Matching categories from the full product catalog...</p>
                 <p v-else class="popover-note">No matching product categories were found for this keyword.</p>
               </div>
             </div>
@@ -308,20 +310,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, reactive, ref, watch } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   addShopList,
   getCategory,
   getCountry,
   getDefault,
+  getProcurementSearchStatus,
   getProductRelatedRecommend,
   getRate,
   searchImg,
   searchKeyword,
   searchProcurementProducts
 } from '~/services/api'
-import { buildProductTaxonomyFilters, type ProductFilterOption, type ProductTaxonomyNode } from '~/data/productTaxonomy'
+import {
+  buildProductTaxonomyFilters,
+  buildResultCategoryFilters,
+  mergeCategoryFilterGroups,
+  type ProductCategoryFacet,
+  type ProductFilterOption,
+  type ProductTaxonomyNode
+} from '~/data/productTaxonomy'
 import {
   cloneCapabilities,
   defaultCapabilities,
@@ -364,6 +374,7 @@ const queryState = ref<Record<string, string>>({})
 const productList = ref<ProcurementProduct[]>([])
 const relatedList = ref<ProcurementProduct[]>([])
 const categoryGroups = ref<any[]>([])
+const keywordCategoryGroups = ref<any[]>([])
 const selectedCategories = ref<ProductFilterOption[]>([])
 const productError = ref('')
 const loading = ref(true)
@@ -379,6 +390,7 @@ const sortKey = ref('relevance')
 const backendMode = ref<'search-api' | 'fallback'>('search-api')
 const capabilities = ref<SearchCapabilities>(cloneCapabilities(defaultCapabilities))
 const attributeFacets = ref<AttributeFacet[]>([])
+const categoryFacets = ref<ProductCategoryFacet[]>([])
 const pageSize = 20
 const skeletonItems = Array.from({ length: 15 }, (_, index) => index)
 const actionRegion = ref('')
@@ -388,6 +400,7 @@ const appliedFilters = reactive<ProcurementFilters>({ categoryIds: [] })
 let taxonomyCache: ProductTaxonomyNode[] | null = null
 let requestSequence = 0
 let autoApplyTimer: ReturnType<typeof setTimeout> | undefined
+let indexPollTimer: ReturnType<typeof setTimeout> | undefined
 
 const alibabaIcon = new URL('@/assets/images/1688alibaba.svg', import.meta.url).href
 const keywordDisplay = computed(() => queryState.value.keyword ? decodeURIComponent(queryState.value.keyword) : '')
@@ -396,6 +409,9 @@ const categorySelectedCount = computed(() => selectedCategories.value.length)
 const indexStatusTitle = computed(() => {
   if (capabilities.value.indexStatus === 'complete') return 'Full-result filters ready'
   if (capabilities.value.indexStatus === 'failed') return 'Filter index needs attention'
+  if (capabilities.value.queue?.queryQueuePosition) {
+    return `Filters queued · #${capabilities.value.queue.queryQueuePosition}`
+  }
   return 'Preparing complete filters'
 })
 const capabilitySummary = computed(() => [
@@ -600,6 +616,63 @@ function normalizeProducts(items: ProcurementProduct[]) {
   }))
 }
 
+function updateResultCategories(items: ProcurementProduct[]) {
+  if (!taxonomyCache || selectedCategories.value.length) return
+  const resultGroups = buildResultCategoryFilters(taxonomyCache, items, categoryFacets.value)
+  categoryGroups.value = mergeCategoryFilterGroups(resultGroups, keywordCategoryGroups.value)
+}
+
+function clearIndexPoll() {
+  if (indexPollTimer) clearTimeout(indexPollTimer)
+  indexPollTimer = undefined
+}
+
+function scheduleIndexPoll(delay = 2500) {
+  clearIndexPoll()
+  if (
+    !process.client
+    || !keywordDisplay.value
+    || backendMode.value !== 'search-api'
+    || capabilities.value.indexStatus === 'complete'
+    || capabilities.value.indexStatus === 'failed'
+  ) return
+  const keyword = keywordDisplay.value
+  indexPollTimer = setTimeout(() => pollIndexStatus(keyword), delay)
+}
+
+async function pollIndexStatus(keyword: string) {
+  if (keyword !== keywordDisplay.value) return
+  try {
+    const response = await getProcurementSearchStatus({
+      keyword,
+      page: 1,
+      pageSize: 1,
+      sortBy: 'relevance',
+      direction: 'desc',
+      filters: {
+        ...JSON.parse(JSON.stringify(appliedFilters)),
+        categoryIds: selectedCategoryIds.value.length
+          ? selectedCategoryIds.value
+          : (queryState.value.categoryId ? [queryState.value.categoryId] : [])
+      }
+    })
+    if (keyword !== keywordDisplay.value) return
+    const data = response.data?.data || response.data
+    capabilities.value = cloneCapabilities(data?.capabilities)
+    if (Array.isArray(data?.facets?.categories) && data.facets.categories.length) {
+      categoryFacets.value = data.facets.categories
+      updateResultCategories(productList.value)
+    }
+    if (Array.isArray(data?.facets?.attributes)) {
+      attributeFacets.value = data.facets.attributes
+    }
+    scheduleIndexPoll()
+  } catch (error) {
+    console.warn('Search index status could not be refreshed', error)
+    if (keyword === keywordDisplay.value) scheduleIndexPoll(5000)
+  }
+}
+
 async function fetchFromSearchApi() {
   const ordering = searchApiSort()
   const response = await searchProcurementProducts({
@@ -620,11 +693,13 @@ async function fetchFromSearchApi() {
   backendMode.value = 'search-api'
   capabilities.value = cloneCapabilities(data.capabilities)
   attributeFacets.value = Array.isArray(data.facets?.attributes) ? data.facets.attributes : []
+  categoryFacets.value = Array.isArray(data.facets?.categories) ? data.facets.categories : []
   return { items: data.items, total: Number(data.total || 0) }
 }
 
 async function fetchFromUpstream() {
   backendMode.value = 'fallback'
+  categoryFacets.value = []
   capabilities.value = cloneCapabilities({
     indexStatus: 'building',
     coverage: 0,
@@ -694,8 +769,10 @@ async function fetchProducts(reset = false) {
     }
     if (requestId !== requestSequence) return
     productList.value = normalizeProducts(result.items)
+    updateResultCategories(result.items)
     totalNum.value = result.total
     searchImage.value = queryState.value.imageIdList || ''
+    scheduleIndexPoll()
   } catch (error: any) {
     if (requestId !== requestSequence) return
     console.error('Failed to fetch products', error)
@@ -721,14 +798,16 @@ async function fetchCategories() {
           ? response.data.data
           : []
     }
-    categoryGroups.value = buildProductTaxonomyFilters(
+    keywordCategoryGroups.value = buildProductTaxonomyFilters(
       taxonomyCache || [],
       keywordDisplay.value,
       queryState.value.categoryId
     )
+    categoryGroups.value = keywordCategoryGroups.value
   } catch (error) {
     console.warn('Product categories could not be loaded', error)
     categoryGroups.value = []
+    keywordCategoryGroups.value = []
   }
 }
 
@@ -802,6 +881,7 @@ onMounted(() => {
 })
 
 watch(() => route.fullPath, () => {
+  clearIndexPoll()
   syncQuery()
   selectedCategories.value = []
   Object.keys(draftFilters).forEach(key => key !== 'categoryIds' && delete (draftFilters as Record<string, unknown>)[key])
@@ -813,6 +893,11 @@ watch(() => route.fullPath, () => {
   current.value = 1
   sortKey.value = 'relevance'
   bootstrap()
+})
+
+onBeforeUnmount(() => {
+  clearIndexPoll()
+  if (autoApplyTimer) clearTimeout(autoApplyTimer)
 })
 </script>
 

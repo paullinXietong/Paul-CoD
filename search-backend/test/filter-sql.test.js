@@ -5,6 +5,7 @@ import { normalizeKeyword, queryHash } from '../src/indexer.js'
 
 test('normalizes keywords and makes category-specific stable hashes', () => {
   assert.equal(normalizeKeyword('  Disposable   COMB '), 'disposable comb')
+  assert.equal(normalizeKeyword('  宠物   用品 '), '宠物 用品')
   assert.equal(queryHash('Shoes', '1'), queryHash(' shoes ', '1'))
   assert.notEqual(queryHash('Shoes', '1'), queryHash('Shoes', '2'))
 })

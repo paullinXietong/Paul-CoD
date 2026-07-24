@@ -126,6 +126,7 @@ export function getCategory(data:any){ return createAxios().post('/shipping/Cate
 export function getRecommend(data:any){ return createAxios().post('/shipping/Goods/ProductSearchOfferRecommend', data) }
 export function searchKeyword(data:any){ return createAxios().post('/shipping/Goods/ProductSearchKeywordQuery', data) }
 export function searchProcurementProducts(data:any){ return createSearchAxios().post('/v1/search', data) }
+export function getProcurementSearchStatus(data:any){ return createSearchAxios().post('/v1/search/status', data) }
 export function getImgId(data:any){ return createAxios().post('/shipping/Goods/ProductImageUpload', data) }
 export function searchImg(data:any){ return createAxios().post('/shipping/Goods/ProductSearchImageQueryParam', data) }
 export function getInfo(data:any){ return createAxios().post('/customer/api/polymerization/getUserInfoFromCode', data) }

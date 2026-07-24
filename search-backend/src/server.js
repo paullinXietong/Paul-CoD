@@ -8,7 +8,14 @@ import {
   storeProducts,
   upsertJob
 } from './db.js'
-import { enqueueIndex, normalizeKeyword, queryHash, queryIndexState } from './indexer.js'
+import {
+  enqueueDetailIndex,
+  enqueueIndex,
+  normalizeKeyword,
+  queryHash,
+  queryIndexState,
+  queueState
+} from './indexer.js'
 import { searchUpstream } from './upstream.js'
 
 const app = express()
@@ -86,6 +93,7 @@ function capabilityPayload(indexState) {
   return {
     indexStatus: indexState.status,
     coverage: indexState.coverage,
+    queue: indexState.queue || queueState(),
     filters: {
       categoryIds: { state: 'native', enabled: true, coverage: 1 },
       price: readyCapability('Preparing the complete result index'),
@@ -163,7 +171,8 @@ app.get('/health', async (_request, response) => {
   response.json({
     status: 'ok',
     database: databaseReady() ? 'ready' : 'unavailable',
-    service: 'codropshipping-search-api'
+    service: 'codropshipping-search-api',
+    queue: queueState()
   })
 })
 
@@ -171,13 +180,16 @@ app.post('/v1/search', rateLimit, async (request, response) => {
   try {
     const input = validateSearch(request.body)
     const hashes = input.categoryIds.map(categoryId => queryHash(input.keyword, categoryId))
-    const indexState = databaseReady()
+    let indexState = databaseReady()
       ? await queryIndexState(hashes)
       : { complete: false, status: 'not_started', coverage: 0, detailCoverage: 0, jobs: [] }
 
     let result
     let facets = { summary: {}, attributes: [] }
     if (indexState.complete) {
+      if (Number(indexState.detailCoverage || 0) < Number(process.env.DETAIL_FILTER_COVERAGE_THRESHOLD || 0.9)) {
+        hashes.forEach(hash => enqueueDetailIndex({ hash }))
+      }
       result = await queryProducts({
         queryHashes: hashes,
         filters: input.filters,
@@ -189,6 +201,7 @@ app.post('/v1/search', rateLimit, async (request, response) => {
       facets = await queryFacets({ queryHashes: hashes, filters: input.filters })
     } else {
       result = await fetchLiveResults(input, hashes)
+      if (databaseReady()) indexState = await queryIndexState(hashes)
     }
 
     response.json({
@@ -203,6 +216,30 @@ app.post('/v1/search', rateLimit, async (request, response) => {
     })
   } catch (error) {
     const message = error?.message || 'Search failed'
+    const status = /keyword must|invalid/i.test(message) ? 400 : 502
+    response.status(status).json({ error: message })
+  }
+})
+
+app.post('/v1/search/status', rateLimit, async (request, response) => {
+  try {
+    const input = validateSearch(request.body)
+    const hashes = input.categoryIds.map(categoryId => queryHash(input.keyword, categoryId))
+    const indexState = databaseReady()
+      ? await queryIndexState(hashes)
+      : { complete: false, status: 'not_started', coverage: 0, detailCoverage: 0, jobs: [] }
+    const facets = indexState.complete
+      ? await queryFacets({ queryHashes: hashes, filters: input.filters })
+      : { summary: {}, categories: [], attributes: [] }
+
+    response.json({
+      data: {
+        facets,
+        capabilities: capabilityPayload(indexState)
+      }
+    })
+  } catch (error) {
+    const message = error?.message || 'Search status failed'
     const status = /keyword must|invalid/i.test(message) ? 400 : 502
     response.status(status).json({ error: message })
   }
