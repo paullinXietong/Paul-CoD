@@ -202,8 +202,8 @@
                   <div class="my-2">
                     <div class="text-base w-20 text-black font-semibold">{{ attrName }}</div>
                     <div class="w-full" v-if="priceList.length===sizeAttribute.length">
-                      <div class="px-2 flex my-3 items-center h-10" v-for="(item,index) in sizeAttribute" :key="index">
-                        <div class="flex-1 text-sm flex items-center" style="width: 351px;">
+                      <div class="px-2 my-3 sku-row" v-for="(item,index) in sizeAttribute" :key="index">
+                        <div class="text-sm flex items-center sku-name">
                           <div class="flex-shrink-0" v-if="skuImageList.length>0 && colorAttribute.length===0">
                             <img :src="skuImageList[index]" class="w-10 h-10 rounded" 
                               :class="skuImageList[index]?'block':'hidden'"
@@ -211,16 +211,16 @@
                           </div>
                           <div class="skuTitle" :title="item.valueTrans">{{ item.valueTrans }}</div>
                         </div>
-                        <div class="w-56">
-                          <div class="flex items-center">
-                            <div class="w-28 text-sm">${{ priceList[index].price }}</div>
-                            <div class="flex items-center">
+                        <div class="sku-detail">
+                          <div class="sku-detail-main">
+                            <div class="sku-price text-sm">${{ priceList[index].price }}</div>
+                            <div class="sku-stepper flex items-center">
                               <button class="w-6 h-6 text-center bg-gray-100" @click="reduceNum(index)">-</button>
                               <input :readonly="onlyOne" class="mx-0.5 w-14 text-center" type="text" v-model="skuNumber[actionColor].sizeNumber[index]" @blur="blurNumber(index)" />
                               <button class="w-6 h-6 text-center bg-gray-100" @click="addNum(index)">+</button>
                             </div>
                           </div>
-                          <div class="text-xs">Available: {{ priceList[index].qty }}</div>
+                          <div class="sku-availability text-xs">Available: {{ priceList[index].qty }}</div>
                         </div>
                       </div>
                     </div>
@@ -1785,8 +1785,45 @@ function goTop() { window.scrollTo({ left: 0, top: 0, behavior: 'smooth' }) }
 .action-slide-1{border-color:red;border-width:1px}
 
 .skuTitle{
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex:1 1 auto;
+  min-width:0;
+  max-width:100%;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.sku-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,auto);align-items:center;gap:10px;height:auto}
+.sku-name{min-width:0}
+.sku-detail{width:auto!important;min-width:0}
+.sku-detail-main{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
+.sku-price{flex:1 1 90px;min-width:0;overflow-wrap:anywhere}
+.sku-stepper{flex:0 0 auto}
+@media (max-width: 1100px) {
+  .pdp-layout{flex-direction:column}
+  .pdp-left{width:100%!important}
+  .pdp-buy{position:static!important;width:100%;max-height:none!important;box-shadow:none!important}
+  .pdp-buy .shop-content{max-height:none!important;overflow:visible!important}
+}
+@media (max-width: 767px) {
+  .bg-gray-100 { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .pdp-layout { flex-direction: column; }
+  .pdp-left { display: contents; }
+  .pdp-left > .flex { flex-direction: column; order: 1; }
+  .pdp-left > .flex > .mx-auto { order: 1; width: 100%; }
+  .pdp-left > .flex > .mx-auto img { max-width: 100% !important; max-height: 470px !important; width: 100%; height: auto; border-radius: 12px; object-fit: contain; background: #fff; }
+  .pdp-thumbs { order: 2; display: flex; flex-direction: row; overflow-x: auto; gap: 8px; margin: 10px 0 0 !important; padding: 4px; }
+  .pdp-thumbs > button { margin: 0 !important; }
+  .pdp-buy { order: 2; position: static !important; max-height: none !important; width: 100%; padding: 14px !important; box-shadow: none !important; }
+  .pdp-buy .shop-content { max-height: none !important; overflow: visible !important; }
+  .pdp-left > .my-3 { order: 3; padding: 0 14px 18px; }
+  #action-btn { position: static !important; margin: 16px 0 0 !important; }
+  .pdp-heading{flex-direction:column}
+  .source-links{width:100%}
+}
+@media(max-width:520px){
+  .sku-row{height:auto;padding:9px 0;grid-template-columns:minmax(0,1fr)}
+  .sku-name{width:auto!important;flex:1 1 auto;min-width:0}
+  .sku-name .skuTitle{max-width:100%}
+  .sku-detail{width:100%!important;max-width:none}
+  .sku-detail-main{justify-content:space-between;flex-wrap:wrap}
 }
 </style>
